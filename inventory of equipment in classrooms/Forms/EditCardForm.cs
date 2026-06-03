@@ -1,0 +1,844 @@
+﻿// EditCardForm.cs
+using System;
+using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+using Microsoft.EntityFrameworkCore;
+using Guna.UI2.WinForms;
+using inventory_of_equipment_in_classrooms.Data;
+using inventory_of_equipment_in_classrooms.Forms;
+using inventory_of_equipment_in_classrooms.Models;
+
+namespace inventory_of_equipment_in_classrooms
+{
+    public partial class EditCardForm : Form
+    {
+        private readonly Color DefaultBlueColor = Color.FromArgb(0, 51, 153);
+        private readonly Color HoverPanelColor = Color.FromArgb(10, 61, 173);
+        private readonly int _currentUserId;
+        private List<int> _searchFilterIds = new List<int>();
+        private int? _selectedRoomId;
+        private int _selectedEquipmentId = 0;
+
+        public EditCardForm(int currentUserId)
+        {
+            InitializeComponent();
+            _currentUserId = currentUserId;
+            this.FormClosing += EditCardForm_FormClosing;
+            this.Load += EditCardForm_Load;
+
+            dgvEquipment.AllowUserToAddRows = false;
+            dgvEquipment.ReadOnly = true;
+            dgvEquipment.CellClick += dgvEquipment_CellClick;
+        }
+
+        private void EditCardForm_Load(object sender, EventArgs e)
+        {
+            SetActiveButton(btnEditCard);
+            try
+            {
+                UnsubscribeFilterEvents();
+                LoadFilterData();
+                LoadEquipmentData();
+                SubscribeFilterEvents();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при загрузке формы: {ex.InnerException?.Message ?? ex.Message}", "Ошибка БД", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        
+
+        private static DatabaseContent GetDbContext() => new DatabaseContent();
+
+        private void LoadFilterData()
+        {
+            using var dbContext = GetDbContext();
+
+            var teachers = dbContext.Users
+                .Select(u => new UserReference
+                {
+                    Id = u.Id,
+                    FullName = u.Surname + " " + u.Firstname + (u.Patronymic != null ? " " + u.Patronymic : "")
+                })
+                .OrderBy(u => u.FullName)
+                .ToList();
+            teachers.Insert(0, new UserReference { Id = 0, FullName = "Все преподаватели" });
+            teachers.Insert(1, new UserReference { Id = -1, FullName = "Не назначен" });
+            cmbTeachers.DataSource = teachers;
+            cmbTeachers.DisplayMember = "FullName";
+            cmbTeachers.ValueMember = "Id";
+
+            var classrooms = dbContext.Rooms
+                .Select(r => new RoomReference { Id = r.Id, Name = r.RoomName })
+                .OrderBy(r => r.Name)
+                .ToList();
+            classrooms.Insert(0, new RoomReference { Id = 0, Name = "Все аудитории" });
+            classrooms.Insert(1, new RoomReference { Id = -1, Name = "Не назначена" });
+            cmbClassrooms.DataSource = classrooms;
+            cmbClassrooms.DisplayMember = "Name";
+            cmbClassrooms.ValueMember = "Id";
+
+            cmbTeachers.SelectedValue = 0;
+            cmbClassrooms.SelectedValue = 0;
+        }
+
+        private void LoadEquipmentData()
+        {
+            using var dbContext = GetDbContext();
+            var data = dbContext.InventoryItems
+                .Include(i => i.Room)
+                .Include(i => i.Custodian)
+                .Select(i => new
+                {
+                    i.Id,
+                    Аудитория = i.Room != null ? i.Room.RoomName : "Н/Д",
+                    Ответственный = i.Custodian != null ? $"{i.Custodian.Surname} {i.Custodian.Firstname}" : "Н/Д",
+                    Название = i.Name,
+                    Инв_Номер = i.InventoryNumber,
+                    Серийный_Номер = i.SerialNumber,
+                    Дата_Учета = i.DateOnAccounting,
+                    Стоимость = i.InitialCost,
+                    Состояние = i.CurrentState,
+                    Ед_Изм = i.UnitName,
+                    Код_ОКЕИ = i.OkeiCode,
+                    RoomId = i.RoomId,
+                    CustodianId = i.CustodianId
+                }).ToList();
+
+            dgvEquipment.DataSource = data;
+
+            string[] hiddenColumns = { "Id", "RoomId", "CustodianId" };
+            foreach (var col in hiddenColumns)
+            {
+                if (dgvEquipment.Columns.Contains(col))
+                    dgvEquipment.Columns[col].Visible = false;
+            }
+        }
+
+        private void CmbFilter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadEquipmentData();
+        }
+
+        private bool TryParseInput(out decimal initialCost, out decimal amortizationAmount, out decimal residualValue, out DateTime? dateOnAccount, out string equipmentName, out string currentState)
+        {
+            initialCost = amortizationAmount = residualValue = 0;
+            dateOnAccount = null;
+            equipmentName = txtEquipmentName.Text.Trim();
+            currentState = txtCurrentState.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(equipmentName))
+            {
+                MessageBox.Show("Заполните поле 'Основное средство'.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(currentState)) currentState = "Н/Д";
+
+            if (!decimal.TryParse(txtInitialCost.Text, out initialCost))
+            {
+                MessageBox.Show("Введите корректные числовые значения для стоимостных полей.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (initialCost < 0 || amortizationAmount < 0 || residualValue < 0)
+            {
+                MessageBox.Show("Стоимостные поля не могут быть отрицательными.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(txtDateOnAccount.Text))
+            {
+                if (DateTime.TryParse(txtDateOnAccount.Text, out DateTime dt))
+                    dateOnAccount = dt;
+                else
+                {
+                    MessageBox.Show("Введите корректную дату (ДД.ММ.ГГГГ).", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void dgvEquipment_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            DataGridViewRow row = dgvEquipment.Rows[e.RowIndex];
+
+            // Железно фиксируем ID редактируемой записи в переменную класса!
+            _selectedEquipmentId = Convert.ToInt32(row.Cells["Id"].Value);
+
+            txtEquipmentName.Text = row.Cells["Название"].Value?.ToString();
+            txtInventoryNumber.Text = row.Cells["Инв_Номер"].Value?.ToString();
+            txtDateOnAccount.Text = row.Cells["Дата_Учета"].Value?.ToString();
+            txtInitialCost.Text = row.Cells["Стоимость"].Value?.ToString();
+            txtCurrentState.Text = row.Cells["Состояние"].Value?.ToString();
+            txtUnitName.Text = row.Cells["Ед_Изм"].Value?.ToString();
+            txtOkeiCode.Text = row.Cells["Код_ОКЕИ"].Value?.ToString();
+
+            int roomId = row.Cells["RoomId"].Value as int? ?? -1;
+            int custodianId = row.Cells["CustodianId"].Value as int? ?? -1;
+
+            UpdateCombos(roomId, custodianId);
+        }
+        private void UpdateCombos(int roomId, int custodianId)
+        {
+            // Отключаем события фильтрации, чтобы смена значения не вызывала перезагрузку таблицы
+            UnsubscribeFilterEvents();
+
+            // Установка аудитории
+            if (cmbClassrooms.Items.Cast<object>().Any()) // Проверка, что список не пуст
+            {
+                cmbClassrooms.SelectedValue = roomId > 0 ? roomId : 0;
+            }
+
+            // Установка ответственного
+            if (cmbTeachers.Items.Cast<object>().Any())
+            {
+                cmbTeachers.SelectedValue = custodianId > 0 ? custodianId : 0;
+            }
+
+            // Включаем события обратно
+            SubscribeFilterEvents();
+        }
+
+        private void btnAddData_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using var dbContext = GetDbContext();
+
+                if (!TryParseInput(out decimal initialCost, out _, out _, out DateTime? dateOnAccount, out string equipmentName, out string currentState))
+                    return;
+
+                // Получаем ID выбранного преподавателя и комнаты
+                int selectedTeacherId = Convert.ToInt32(cmbTeachers.SelectedValue);
+                int selectedClassroomId = Convert.ToInt32(cmbClassrooms.SelectedValue);
+
+                var newItem = new InventoryItem
+                {
+                    Name = equipmentName,
+                    InventoryNumber = txtInventoryNumber.Text.Trim(),
+                    UnitName = txtUnitName.Text.Trim(),         // ДОБАВЛЕНО
+                    OkeiCode = txtOkeiCode.Text.Trim(),         // ДОБАВЛЕНО
+
+                    DateOnAccounting = dateOnAccount.HasValue
+                        ? DateTime.SpecifyKind(dateOnAccount.Value, DateTimeKind.Utc)
+                        : DateTime.UtcNow,
+
+                    InitialCost = initialCost,
+                    CurrentState = currentState,
+
+                    // Присваиваем внешние ключи (если выбрано > 0, иначе null)
+                    RoomId = selectedClassroomId > 0 ? selectedClassroomId : (int?)null,
+                    CustodianId = selectedTeacherId > 0 ? selectedTeacherId : (int?)null
+                };
+
+                dbContext.InventoryItems.Add(newItem);
+                dbContext.SaveChanges();
+
+                MessageBox.Show("Запись успешно добавлена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                LoadEquipmentData();
+
+                // Очистка полей после добавления (по желанию)
+                ClearInputs();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.InnerException?.Message ?? ex.Message}");
+            }
+        }
+        private void ClearInputs()
+        {
+            _selectedEquipmentId = 0; // СБРАСЫВАЕМ ID ТЕКУЩЕЙ ЗАПИСИ
+            txtEquipmentName.Clear();
+            txtInventoryNumber.Clear();
+            txtInitialCost.Clear();
+            txtUnitName.Clear();
+            txtOkeiCode.Clear();
+            txtCurrentState.Text = "в наличии";
+            cmbClassrooms.SelectedIndex = 0;
+            cmbTeachers.SelectedIndex = 0;
+        }
+        private void BtnEditData_Click(object sender, EventArgs e)
+        {
+            // Проверяем, зафиксирован ли ID записи
+            if (_selectedEquipmentId <= 0)
+            {
+                MessageBox.Show("Выберите конкретную запись в таблице перед редактированием.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 1. Парсим данные из полей ввода
+            if (!TryParseInput(out decimal initialCost, out _, out _, out DateTime? dateOnAccount, out string equipmentName, out string currentState))
+                return;
+
+            try
+            {
+                using var dbContext = GetDbContext();
+
+                // 2. Ищем объект в базе строго по нашему сохраненному _selectedEquipmentId
+                var item = dbContext.InventoryItems.Find(_selectedEquipmentId);
+
+                if (item == null)
+                {
+                    MessageBox.Show("Запись не найдена в базе данных. Возможно, она была удалена.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // 3. Проверка уникальности номера
+                string inputInvNumber = txtInventoryNumber.Text.Trim();
+
+                // Проверяем: есть ли в базе ДРУГАЯ запись (i.Id != _selectedEquipmentId) с таким же номером?
+                bool exists = dbContext.InventoryItems.Any(i => i.InventoryNumber == inputInvNumber && i.Id != _selectedEquipmentId);
+                if (exists)
+                {
+                    MessageBox.Show("Этот инвентарный номер уже присвоен другому оборудованию!", "Ошибка уникальности", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Если все ок — присваиваем номер
+                item.InventoryNumber = inputInvNumber;
+
+                // 4. Присваиваем новые значения остальным полям
+                item.Name = equipmentName;
+                item.InitialCost = initialCost;
+                item.CurrentState = currentState;
+                item.UnitName = txtUnitName.Text.Trim();
+                item.OkeiCode = txtOkeiCode.Text.Trim();
+
+                if (dateOnAccount.HasValue)
+                {
+                    item.DateOnAccounting = DateTime.SpecifyKind(dateOnAccount.Value, DateTimeKind.Utc);
+                }
+
+                int selectedTeacherId = Convert.ToInt32(cmbTeachers.SelectedValue);
+                int selectedClassroomId = Convert.ToInt32(cmbClassrooms.SelectedValue);
+
+                item.CustodianId = (selectedTeacherId <= 0) ? null : (int?)selectedTeacherId;
+                item.RoomId = (selectedClassroomId <= 0) ? null : (int?)selectedClassroomId;
+
+                // 5. Сохраняем изменения
+                dbContext.SaveChanges();
+
+                MessageBox.Show("Запись успешно обновлена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Сбрасываем ID выделения и очищаем поля
+                _selectedEquipmentId = 0;
+                ClearInputs();
+
+                // Обновляем таблицу
+                LoadEquipmentData();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при сохранении: {ex.InnerException?.Message ?? ex.Message}", "Ошибка БД", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnDeleteData_Click(object sender, EventArgs e)
+        {
+            // 1. Проверяем, выбрана ли строка
+            if (dgvEquipment.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Выберите запись для удаления.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 2. Стандартное подтверждение вместо окна из image_847cf8.png
+            var result = MessageBox.Show("Вы уверены, что хотите окончательно удалить выбранную запись?",
+                                         "Подтверждение удаления",
+                                         MessageBoxButtons.YesNo,
+                                         MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    int selectedId = (int)dgvEquipment.SelectedRows[0].Cells["Id"].Value;
+
+                    using var dbContext = GetDbContext();
+                    var item = dbContext.InventoryItems.Find(selectedId);
+
+                    if (item != null)
+                    {
+                        dbContext.InventoryItems.Remove(item);
+                        dbContext.SaveChanges();
+
+                        MessageBox.Show("Запись успешно удалена.");
+                        LoadEquipmentData(); // Обновляем таблицу
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при удалении: {ex.Message}");
+                }
+            }
+        }
+
+        private void btnSearch_Click(object sender, EventArgs e)
+        {
+            // Создаем форму поиска
+            using (SearchForm searchForm = new SearchForm(_currentUserId, _selectedRoomId))
+            {
+                // Ждем, пока пользователь нажмет "Поиск" (DialogResult.OK)
+                if (searchForm.ShowDialog() == DialogResult.OK)
+                {
+                    var foundIds = searchForm.SelectedInventoryItemIds;
+
+                    if (foundIds.Count > 0)
+                    {
+                        // Фильтруем данные в DataGrid
+                        DisplaySearchResults(foundIds);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Записей не найдено.");
+                        LoadEquipmentData(); // Показываем все данные, если ничего не нашли
+                    }
+                }
+            }
+        }
+        private void AutoSelectTeacherByClassroom()
+        {
+            if (cmbClassrooms.SelectedValue != null)
+            {
+                int selectedRoomId = Convert.ToInt32(cmbClassrooms.SelectedValue);
+
+                // Пропускаем системные значения (Все / Не назначена)
+                if (selectedRoomId <= 0) return;
+
+                try
+                {
+                    using var dbContext = new DatabaseContent();
+
+                    // Ищем комнату напрямую в таблице room и смотрим её поле TeacherId
+                    var room = dbContext.Rooms.FirstOrDefault(r => r.Id == selectedRoomId);
+
+                    UnsubscribeFilterEvents();
+
+                    if (room != null && room.TeacherId.HasValue && room.TeacherId.Value > 0)
+                    {
+                        int linkedTeacherId = room.TeacherId.Value;
+
+                        // Проверяем, загружен ли этот учитель в комбобокс преподавателей
+                        // (При условии, что элементы в cmbTeachers приводятся к твоему типу ссылок, например UserReference или User)
+                        // Если ты заполнял комбобокс через SelectedValue = Id, то можно сразу применить:
+                        cmbTeachers.SelectedValue = linkedTeacherId;
+                    }
+                    else
+                    {
+                        // Если преподаватель в базе равен NULL, сбрасываем на "Не назначен"
+                        cmbTeachers.SelectedValue = -1;
+                    }
+
+                    SubscribeFilterEvents();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка автовыбора: {ex.Message}");
+                    SubscribeFilterEvents();
+                }
+            }
+        }
+        private void DisplaySearchResults(List<int> ids)
+        {
+            using var dbContext = GetDbContext();
+
+            var data = dbContext.InventoryItems
+                .Include(i => i.Room)
+                .Include(i => i.Custodian)
+                .Where(i => ids.Contains(i.Id))
+                .Select(i => new
+                {
+                    i.Id,
+                    Аудитория = i.Room != null ? i.Room.RoomName : "Н/Д",
+                    Ответственный = i.Custodian != null ? $"{i.Custodian.Surname} {i.Custodian.Firstname}" : "Н/Д",
+                    Название = i.Name,
+                    Инв_Номер = i.InventoryNumber,
+                    Серийный_Номер = i.SerialNumber,
+                    Дата_Учета = i.DateOnAccounting,
+                    Стоимость = i.InitialCost,
+                    Состояние = i.CurrentState,
+                    Ед_Изм = i.UnitName,
+                    Код_ОКЕИ = i.OkeiCode,
+                    CustodianId = i.CustodianId,
+                    RoomId = i.RoomId
+                }).ToList();
+
+            dgvEquipment.DataSource = data;
+        }
+        private void BtnResetSearch_Click(object sender, EventArgs e)
+        {
+            _searchFilterIds.Clear();
+            LoadEquipmentData();
+            MessageBox.Show("Фильтр поиска сброшен.", "Сброс", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void EditCardForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                if (MessageBox.Show("Вы уверены, что хотите выйти?", "Выход", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+                    e.Cancel = true;
+            }
+        }
+
+        private void SetActiveButton(Guna2Button activeBtn)
+        {
+            btnProfile.FillColor = btnEditCard.FillColor = btnTransfer.FillColor = DefaultBlueColor;
+            btnProfile.ForeColor = btnEditCard.ForeColor = btnTransfer.ForeColor = Color.White;
+            pictureBox1.BackColor = pictureBox3.BackColor = pictureBox4.BackColor = DefaultBlueColor;
+
+            activeBtn.FillColor = Color.White;
+            activeBtn.ForeColor = Color.Black;
+            if (activeBtn == btnProfile) pictureBox1.BackColor = Color.White;
+            else if (activeBtn == btnEditCard) pictureBox3.BackColor = Color.White;
+            else if (activeBtn == btnTransfer) pictureBox4.BackColor = Color.White;
+        }
+
+        private void BtnProfile_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Вы уверены, что хотите вернуться на профиль?",
+                "Выход", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
+            }
+        }
+
+        private void BtnEditCard_Click(object sender, EventArgs e) => SetActiveButton(btnEditCard);
+        private void BtnTransfer_Click(object sender, EventArgs e)
+        {
+            SetActiveButton(btnTransfer);
+
+            try
+            {
+                var transferForm = new TransferForm(_currentUserId);
+                transferForm.ShowDialog();
+
+                SetActiveButton(btnEditCard);
+                LoadEquipmentData(); 
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка");
+                SetActiveButton(btnEditCard);
+            }
+        }
+
+        private void PBoxLogo_MouseEnter(object sender, EventArgs e) => pnlTopBar.BackColor = HoverPanelColor;
+        private void PBoxLogo_MouseLeave(object sender, EventArgs e) => pnlTopBar.BackColor = DefaultBlueColor;
+        private void cmbClassrooms_SelectedIndexChanged(object sender, EventArgs e) {
+            AutoSelectTeacherByClassroom();
+            LoadEquipmentData();
+        }
+        private void SubscribeFilterEvents()
+        {
+            if (cmbTeachers != null) cmbTeachers.SelectedIndexChanged += CmbFilter_SelectedIndexChanged;
+            if (cmbClassrooms != null) cmbClassrooms.SelectedIndexChanged += cmbClassrooms_SelectedIndexChanged;
+        }
+
+        private void UnsubscribeFilterEvents()
+        {
+            if (cmbTeachers != null) cmbTeachers.SelectedIndexChanged -= CmbFilter_SelectedIndexChanged;
+            if (cmbClassrooms != null) cmbClassrooms.SelectedIndexChanged -= cmbClassrooms_SelectedIndexChanged;
+        }
+        private void CmbTeachers_SelectedIndexChanged(object sender, EventArgs e) { }
+
+        private void btnAdd_Click(object sender, EventArgs e)
+        {
+            using var form = new TeacherEditForm(0);
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                UnsubscribeFilterEvents();
+                LoadFilterData();
+                SubscribeFilterEvents();
+                LoadEquipmentData();
+                MessageBox.Show("Преподаватель добавлен.", "Успех",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void guna2Button3_Click(object sender, EventArgs e)
+        {
+            int selectedTeacherId = Convert.ToInt32(cmbTeachers.SelectedValue);
+            if (selectedTeacherId <= 0)
+            {
+                MessageBox.Show("Выберите конкретного преподавателя для удаления.",
+                    "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (MessageBox.Show("Удалить выбранного преподавателя?", "Подтверждение",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            using var dbContext = GetDbContext();
+
+            // Проверяем, есть ли у него оборудование
+            bool hasItems = dbContext.InventoryItems.Any(i => i.CustodianId == selectedTeacherId);
+            if (hasItems)
+            {
+                if (MessageBox.Show(
+                    "За преподавателем числится оборудование. Снять его ответственность и удалить?",
+                    "Внимание", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation)
+                    != DialogResult.Yes)
+                    return;
+
+                // Снимаем ответственность
+                var items = dbContext.InventoryItems
+                    .Where(i => i.CustodianId == selectedTeacherId).ToList();
+                items.ForEach(i => i.CustodianId = null);
+            }
+
+            var teacher = dbContext.Users.Find(selectedTeacherId);
+            if (teacher != null)
+            {
+                dbContext.Users.Remove(teacher);
+                dbContext.SaveChanges();
+                UnsubscribeFilterEvents();
+                LoadFilterData();
+                SubscribeFilterEvents();
+                LoadEquipmentData();
+                MessageBox.Show("Преподаватель удалён.", "Успех",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void btnEditTeacher_Click(object sender, EventArgs e)
+        {
+            int selectedTeacherId = Convert.ToInt32(cmbTeachers.SelectedValue);
+            if (selectedTeacherId <= 0)
+            {
+                MessageBox.Show("Выберите конкретного преподавателя для редактирования.",
+                    "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var form = new TeacherEditForm(selectedTeacherId);
+            if (form.ShowDialog() == DialogResult.OK)
+            {
+                UnsubscribeFilterEvents();
+                LoadFilterData();
+                // Восстанавливаем выбор того же преподавателя
+                if (cmbTeachers.Items.Cast<UserReference>().Any(u => u.Id == selectedTeacherId))
+                    cmbTeachers.SelectedValue = selectedTeacherId;
+                SubscribeFilterEvents();
+                LoadEquipmentData();
+                MessageBox.Show("Данные преподавателя обновлены.", "Успех",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+        private void LoadRoomsData()
+        {
+            try
+            {
+                UnsubscribeFilterEvents(); // Отключаем события, чтобы избежать лишних перезагрузок
+
+                using var dbContext = GetDbContext();
+                var classrooms = dbContext.Rooms
+                    .Select(r => new RoomReference { Id = r.Id, Name = r.RoomName })
+                    .OrderBy(r => r.Name)
+                    .ToList();
+
+                // Добавляем системные пункты
+                classrooms.Insert(0, new RoomReference { Id = 0, Name = "Все аудитории" });
+                classrooms.Insert(1, new RoomReference { Id = -1, Name = "Не назначена" });
+
+                cmbClassrooms.DataSource = classrooms;
+                cmbClassrooms.DisplayMember = "Name";
+                cmbClassrooms.ValueMember = "Id";
+
+                SubscribeFilterEvents();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при обновлении списка аудиторий: {ex.Message}");
+            }
+        }
+        private void btnAddRoom_Click(object sender, EventArgs e)
+        {
+            using var editForm = new RoomEditForm();
+            if (editForm.ShowDialog() != DialogResult.OK) return;
+
+            string newName = editForm.RoomName;
+            if (string.IsNullOrWhiteSpace(newName)) return;
+
+            try
+            {
+                using var db = new DatabaseContent();
+
+                if (db.Rooms.Any(r => r.RoomName == newName))
+                {
+                    MessageBox.Show("Аудитория с таким номером уже существует.");
+                    return;
+                }
+
+                // Создаём без Id — PostgreSQL сам назначит через sequence
+                var newRoom = new Room { RoomName = newName };
+                db.Rooms.Add(newRoom);
+                db.SaveChanges();
+
+                UnsubscribeFilterEvents();
+                LoadFilterData();
+                SubscribeFilterEvents();
+
+                MessageBox.Show($"Аудитория {newName} добавлена (Id={newRoom.Id}).");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.InnerException?.Message ?? ex.Message}");
+            }
+        }
+
+        private void btnEditRoom_Click(object sender, EventArgs e)
+        {
+            if (!(cmbClassrooms.SelectedItem is RoomReference selectedRef) || selectedRef.Id <= 0)
+            {
+                MessageBox.Show("Выберите аудиторию из списка для редактирования.");
+                return;
+            }
+
+            try
+            {
+                using var db = new DatabaseContent();
+                var roomToUpdate = db.Rooms.FirstOrDefault(r => r.Id == selectedRef.Id);
+                if (roomToUpdate == null) return;
+
+                using var editForm = new RoomEditForm(roomToUpdate.RoomName, roomToUpdate.TeacherId);
+                if (editForm.ShowDialog() != DialogResult.OK) return;
+
+                roomToUpdate.RoomName = editForm.RoomName;
+                roomToUpdate.TeacherId = editForm.SelectedTeacherId;
+                db.SaveChanges();
+
+                UnsubscribeFilterEvents();
+                LoadFilterData();
+                SubscribeFilterEvents();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.InnerException?.Message ?? ex.Message}");
+            }
+        }
+
+        private void btnDeleteRoom_Click(object sender, EventArgs e)
+        {
+            if (cmbClassrooms.SelectedItem is RoomReference selectedRef)
+            {
+                if (selectedRef.Id <= 0) return;
+
+                var confirm = MessageBox.Show($"Вы уверены, что хотите удалить аудиторию {selectedRef.Name}?",
+                    "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                if (confirm == DialogResult.Yes)
+                {
+                    try
+                    {
+                        using (var db = new DatabaseContent())
+                        {
+                            var room = db.Rooms.Find(selectedRef.Id);
+                            if (room != null)
+                            {
+                                db.Rooms.Remove(room);
+                                db.SaveChanges();
+                                LoadFilterData();
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        MessageBox.Show("Невозможно удалить аудиторию, так как в ней числится оборудование.");
+                    }
+                }
+            }
+        }
+
+        private void btnDeleteAll_Click(object sender, EventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Вы уверены, что хотите удалить ВСЕ записи об оборудовании?",
+                "Внимание!", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    using (var dbContext = GetDbContext())
+                    {
+                        // Используем прямой SQL, чтобы обойти ошибки валидации полей (как 'quantity')
+                        // Это удалит данные мгновенно и без лишних проверок C#
+                        dbContext.Database.ExecuteSqlRaw("TRUNCATE TABLE savchenko_dm.inventory_item CASCADE");
+
+                        MessageBox.Show("База данных успешно очищена.", "Успех");
+                        LoadEquipmentData();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка: {ex.Message}");
+                }
+            }
+        }
+
+        public class UserReference
+        {
+            public int Id { get; set; }
+            public string FullName { get; set; }
+        }
+
+        public class RoomReference
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        private void btnExport_Click(object sender, EventArgs e)
+        {
+            BtnImport_Click(sender, e);
+        }
+
+        private void guna2Button1_Click(object sender, EventArgs e)
+        {
+            BtnTransferAct_Click(sender, e);
+        }
+
+        private void BtnImport_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SetActiveButton(btnEditCard);
+                var importForm = new ImportForm(_currentUserId);
+                if (importForm.ShowDialog() == DialogResult.OK)
+                {
+                    LoadEquipmentData();
+                    MessageBox.Show("Импорт завершен успешно!", "Успех");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        private void BtnTransferAct_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SetActiveButton(btnEditCard);
+                var transferActForm = new TransferActForm(_currentUserId);
+                if (transferActForm.ShowDialog() == DialogResult.OK)
+                {
+                    LoadEquipmentData();
+                    MessageBox.Show("Акт списания создан успешно!", "Успех");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+    }
+}

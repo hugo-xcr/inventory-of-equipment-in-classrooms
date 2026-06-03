@@ -1,0 +1,165 @@
+﻿using System;
+using System.Linq;
+using System.Windows.Forms;
+using inventory_of_equipment_in_classrooms.Data;
+using inventory_of_equipment_in_classrooms.Forms;
+using inventory_of_equipment_in_classrooms.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace inventory_of_equipment_in_classrooms
+{
+    public partial class ProfileForm : Form
+    {
+        private readonly int _currentUserId;
+        private User _currentUser;
+
+        public ProfileForm(int currentUserId)
+        {
+            InitializeComponent();
+            _currentUserId = currentUserId;
+        }
+
+        private void ProfileForm_Load(object sender, EventArgs e)
+        {
+            SetActiveButton(btnProfile);
+            LoadUserData();
+        }
+
+        private void LoadUserData()
+        {
+            using var db = new DatabaseContent();
+            _currentUser = db.Users.Include(u => u.JobTitle).FirstOrDefault(u => u.Id == _currentUserId);
+            if (_currentUser != null)
+            {
+                txtFirstName.Text = _currentUser.Firstname;
+                txtSurname.Text = _currentUser.Surname;
+                txtEmail.Text = _currentUser.Email;
+                txtJobTitle.Text = _currentUser.JobTitle?.Name ?? "Не указана";
+            }
+        }
+
+        private void BtnSaveChanges_Click(object sender, EventArgs e)
+        {
+            string newFirstName = txtFirstName.Text.Trim();
+            string newSurname = txtSurname.Text.Trim();
+            string newEmail = txtEmail.Text.Trim(); // Добавим и почту, раз она есть в Load
+
+            if (string.IsNullOrEmpty(newFirstName) || string.IsNullOrEmpty(newSurname))
+            {
+                MessageBox.Show("Имя и фамилия не могут быть пустыми.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                using var db = new DatabaseContent();
+                // Ищем пользователя
+                var user = db.Users.FirstOrDefault(u => u.Id == _currentUserId);
+
+                if (user != null)
+                {
+                    // Обновляем поля
+                    user.Firstname = newFirstName;
+                    user.Surname = newSurname;
+                    user.Email = newEmail;
+
+                    db.Entry(user).State = EntityState.Modified;
+
+                    db.SaveChanges();
+
+                    MessageBox.Show("Данные успешно сохранены!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Обновляем локальную переменную и интерфейс
+                    LoadUserData();
+                }
+                else
+                {
+                    MessageBox.Show("Пользователь не найден в базе данных.", "Ошибка");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при сохранении: {ex.Message}", "Ошибка БД", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SetActiveButton(Guna.UI2.WinForms.Guna2Button activeBtn)
+        {
+            var inactiveColor = System.Drawing.Color.FromArgb(0, 51, 153);
+            btnProfile.FillColor = btnEditCard.FillColor = btnTransfer.FillColor = inactiveColor;
+            btnProfile.ForeColor = btnEditCard.ForeColor = btnTransfer.ForeColor = System.Drawing.Color.White;
+            activeBtn.FillColor = System.Drawing.Color.White;
+            activeBtn.ForeColor = System.Drawing.Color.Black;
+        }
+
+        private void BtnProfile_Click(object sender, EventArgs e) => SetActiveButton(btnProfile);
+
+        private void BtnEditCard_Click(object sender, EventArgs e)
+        {
+            SetActiveButton(btnEditCard);
+            var editForm = new EditCardForm(_currentUserId);
+            editForm.ShowDialog();
+            SetActiveButton(btnProfile);
+        }
+
+        private void BtnTransfer_Click(object sender, EventArgs e)
+        {
+            SetActiveButton(btnTransfer);
+
+            var result = MessageBox.Show(
+                "Выберите тип документа:\n\nДа — Перемещение оборудования (Накладная)\nНет — Активация автоматического акта",
+                "Выбор действия",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Cancel)
+            {
+                SetActiveButton(btnProfile);
+                return;
+            }
+
+            Form targetForm;
+
+            if (result == DialogResult.Yes)
+            {
+                targetForm = new TransferForm(_currentUserId);
+            }
+            else
+            {
+                targetForm = new TransferActForm(_currentUserId);
+            }
+
+            targetForm.FormClosed += (s, args) => { this.Show(); SetActiveButton(btnProfile); };
+
+            this.Hide();
+            targetForm.Show();
+        }
+
+        private void BtnImport_Click(object sender, EventArgs e)
+        {
+            var importForm = new ImportForm();
+            importForm.ShowDialog();
+        }
+
+        private void btnTransferActForm_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var transferActForm = new TransferActForm(_currentUserId);
+
+                transferActForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Не удалось открыть форму акта: {ex.Message}", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnExport_Click(object sender, EventArgs e)
+        {
+            var importForm = new ImportForm();
+            importForm.ShowDialog();
+        }
+    }
+}
