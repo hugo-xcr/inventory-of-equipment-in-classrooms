@@ -50,9 +50,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             dgvPreview.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         }
 
-        // ═══════════════════════════════════════════════════════════════════════════
-        // НАВИГАЦИЯ МЕЖДУ ФОРМАМИ
-        // ═══════════════════════════════════════════════════════════════════════════
 
         private void BtnProfile_Click(object sender, EventArgs e)
         {
@@ -93,10 +90,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             actForm.ShowDialog();
             this.Close();
         }
-
-        // ═══════════════════════════════════════════════════════════════════════════
-        // ОСНОВНАЯ ЛОГИКА ИМПОРТА
-        // ═══════════════════════════════════════════════════════════════════════════
 
         private void BtnBrowse_Click(object sender, EventArgs e)
         {
@@ -193,11 +186,8 @@ namespace inventory_of_equipment_in_classrooms.Forms
                     int addedCount = 0;
                     foreach (var item in _previewData)
                     {
-                        // Проверка на дубликат по инв. номеру
                         if (!db.InventoryItems.Any(x => x.InventoryNumber == item.InventoryNumber))
                         {
-                            // Принудительно ставим ID текущего авторизованного пользователя, 
-                            // чтобы оборудование не было "ничейным"
                             item.CustodianId = _currentUserId > 0 ? _currentUserId : (int?)null;
 
                             db.InventoryItems.Add(item);
@@ -211,7 +201,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             }
             catch (Exception ex)
             {
-                // Выводим текст ошибки полностью, чтобы видеть, если база опять ругнется
                 MessageBox.Show($"Ошибка сохранения: {ex.InnerException?.Message ?? ex.Message}");
             }
         }

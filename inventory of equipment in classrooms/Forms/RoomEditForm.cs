@@ -10,7 +10,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
 {
     public partial class RoomEditForm : Form
     {
-        // Вспомогательный класс, чтобы комбобокс железно прочитал свойства
         public class TeacherComboItem
         {
             public int Id { get; set; }
@@ -37,7 +36,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             InitializeComponent();
             SetupButtons();
 
-            // Привязываем загрузку данных к событию Load формы, чтобы она срабатывала ВСЕГДА
             this.Load += (s, e) =>
             {
                 LoadTeachersToComboBox();
@@ -45,10 +43,8 @@ namespace inventory_of_equipment_in_classrooms.Forms
         }
         public RoomEditForm(string initialName, int? initialTeacherId) : this()
         {
-            // Заполняем текстовое поле (оно заполнится сразу)
             txtRoom.Text = initialName;
 
-            // Расширяем событие Load, чтобы после загрузки списка выбрать нужного человека
             this.Load += (s, e) =>
             {
                 if (initialTeacherId.HasValue)
@@ -57,7 +53,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 }
                 else
                 {
-                    cmbTeacher.SelectedValue = -1; // Пункт "Не назначен"
+                    cmbTeacher.SelectedValue = -1; 
                 }
             };
         }
@@ -66,10 +62,8 @@ namespace inventory_of_equipment_in_classrooms.Forms
         {
             try
             {
-                // КРИТИЧЕСКИЙ МОМЕНТ: Используем GetContext(), а не new DatabaseContent()!
                 var dbContext = DatabaseContent.GetContext();
 
-                // Загружаем список из базы данных
                 var teachersFromDb = dbContext.Users
                     .Select(u => new TeacherComboItem
                     {
@@ -78,14 +72,12 @@ namespace inventory_of_equipment_in_classrooms.Forms
                     })
                     .ToList();
 
-                // Создаем итоговый список и добавляем пункт "Не назначен"
                 var comboSource = new List<TeacherComboItem>
                 {
                     new TeacherComboItem { Id = -1, Name = "Не назначен" }
                 };
                 comboSource.AddRange(teachersFromDb);
 
-                // Привязываем данные к комбобоксу
                 cmbTeacher.DataSource = comboSource;
                 cmbTeacher.DisplayMember = "Name";
                 cmbTeacher.ValueMember = "Id";

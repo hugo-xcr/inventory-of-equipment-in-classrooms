@@ -40,8 +40,8 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 var columns = new[]
                 {
             new { Name = "Основное средство", Value = "Name" },
-            new { Name = "Инвентарный номер", Value = "InventoryNumber" }, // Было Id, стало InventoryNumber
-            new { Name = "Серийный номер", Value = "SerialNumber" },      // Добавили
+            new { Name = "Инвентарный номер", Value = "InventoryNumber" },
+            new { Name = "Серийный номер", Value = "SerialNumber" },     
             new { Name = "Ответственный", Value = "Custodian" },
             new { Name = "Текущее состояние", Value = "CurrentState" },
             new { Name = "Первоначальная стоимость", Value = "InitialCost" },
@@ -161,7 +161,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 try
                 {
                     using var dbContext = GetDbContext();
-                    // Используем RoomId (PascalCase)
                     SelectedInventoryItemIds = dbContext.InventoryItems
                                               .Where(i => i.RoomId == _filterRoomId.Value)
                                               .Select(i => i.Id)

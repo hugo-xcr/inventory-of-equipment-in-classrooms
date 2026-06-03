@@ -166,7 +166,6 @@ namespace inventory_of_equipment_in_classrooms
             if (e.RowIndex < 0) return;
             DataGridViewRow row = dgvEquipment.Rows[e.RowIndex];
 
-            // Железно фиксируем ID редактируемой записи в переменную класса!
             _selectedEquipmentId = Convert.ToInt32(row.Cells["Id"].Value);
 
             txtEquipmentName.Text = row.Cells["Название"].Value?.ToString();
@@ -184,22 +183,18 @@ namespace inventory_of_equipment_in_classrooms
         }
         private void UpdateCombos(int roomId, int custodianId)
         {
-            // Отключаем события фильтрации, чтобы смена значения не вызывала перезагрузку таблицы
             UnsubscribeFilterEvents();
 
-            // Установка аудитории
-            if (cmbClassrooms.Items.Cast<object>().Any()) // Проверка, что список не пуст
+            if (cmbClassrooms.Items.Cast<object>().Any()) 
             {
                 cmbClassrooms.SelectedValue = roomId > 0 ? roomId : 0;
             }
 
-            // Установка ответственного
             if (cmbTeachers.Items.Cast<object>().Any())
             {
                 cmbTeachers.SelectedValue = custodianId > 0 ? custodianId : 0;
             }
 
-            // Включаем события обратно
             SubscribeFilterEvents();
         }
 
@@ -212,7 +207,6 @@ namespace inventory_of_equipment_in_classrooms
                 if (!TryParseInput(out decimal initialCost, out _, out _, out DateTime? dateOnAccount, out string equipmentName, out string currentState))
                     return;
 
-                // Получаем ID выбранного преподавателя и комнаты
                 int selectedTeacherId = Convert.ToInt32(cmbTeachers.SelectedValue);
                 int selectedClassroomId = Convert.ToInt32(cmbClassrooms.SelectedValue);
 
@@ -220,8 +214,8 @@ namespace inventory_of_equipment_in_classrooms
                 {
                     Name = equipmentName,
                     InventoryNumber = txtInventoryNumber.Text.Trim(),
-                    UnitName = txtUnitName.Text.Trim(),         // ДОБАВЛЕНО
-                    OkeiCode = txtOkeiCode.Text.Trim(),         // ДОБАВЛЕНО
+                    UnitName = txtUnitName.Text.Trim(),         
+                    OkeiCode = txtOkeiCode.Text.Trim(),        
 
                     DateOnAccounting = dateOnAccount.HasValue
                         ? DateTime.SpecifyKind(dateOnAccount.Value, DateTimeKind.Utc)
@@ -230,7 +224,6 @@ namespace inventory_of_equipment_in_classrooms
                     InitialCost = initialCost,
                     CurrentState = currentState,
 
-                    // Присваиваем внешние ключи (если выбрано > 0, иначе null)
                     RoomId = selectedClassroomId > 0 ? selectedClassroomId : (int?)null,
                     CustodianId = selectedTeacherId > 0 ? selectedTeacherId : (int?)null
                 };
@@ -241,7 +234,6 @@ namespace inventory_of_equipment_in_classrooms
                 MessageBox.Show("Запись успешно добавлена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 LoadEquipmentData();
 
-                // Очистка полей после добавления (по желанию)
                 ClearInputs();
             }
             catch (Exception ex)
@@ -251,7 +243,7 @@ namespace inventory_of_equipment_in_classrooms
         }
         private void ClearInputs()
         {
-            _selectedEquipmentId = 0; // СБРАСЫВАЕМ ID ТЕКУЩЕЙ ЗАПИСИ
+            _selectedEquipmentId = 0;
             txtEquipmentName.Clear();
             txtInventoryNumber.Clear();
             txtInitialCost.Clear();
@@ -263,22 +255,18 @@ namespace inventory_of_equipment_in_classrooms
         }
         private void BtnEditData_Click(object sender, EventArgs e)
         {
-            // Проверяем, зафиксирован ли ID записи
             if (_selectedEquipmentId <= 0)
             {
                 MessageBox.Show("Выберите конкретную запись в таблице перед редактированием.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 1. Парсим данные из полей ввода
             if (!TryParseInput(out decimal initialCost, out _, out _, out DateTime? dateOnAccount, out string equipmentName, out string currentState))
                 return;
 
             try
             {
                 using var dbContext = GetDbContext();
-
-                // 2. Ищем объект в базе строго по нашему сохраненному _selectedEquipmentId
                 var item = dbContext.InventoryItems.Find(_selectedEquipmentId);
 
                 if (item == null)
@@ -287,10 +275,8 @@ namespace inventory_of_equipment_in_classrooms
                     return;
                 }
 
-                // 3. Проверка уникальности номера
                 string inputInvNumber = txtInventoryNumber.Text.Trim();
 
-                // Проверяем: есть ли в базе ДРУГАЯ запись (i.Id != _selectedEquipmentId) с таким же номером?
                 bool exists = dbContext.InventoryItems.Any(i => i.InventoryNumber == inputInvNumber && i.Id != _selectedEquipmentId);
                 if (exists)
                 {
@@ -298,10 +284,7 @@ namespace inventory_of_equipment_in_classrooms
                     return;
                 }
 
-                // Если все ок — присваиваем номер
                 item.InventoryNumber = inputInvNumber;
-
-                // 4. Присваиваем новые значения остальным полям
                 item.Name = equipmentName;
                 item.InitialCost = initialCost;
                 item.CurrentState = currentState;
@@ -319,16 +302,14 @@ namespace inventory_of_equipment_in_classrooms
                 item.CustodianId = (selectedTeacherId <= 0) ? null : (int?)selectedTeacherId;
                 item.RoomId = (selectedClassroomId <= 0) ? null : (int?)selectedClassroomId;
 
-                // 5. Сохраняем изменения
                 dbContext.SaveChanges();
 
                 MessageBox.Show("Запись успешно обновлена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // Сбрасываем ID выделения и очищаем поля
+
                 _selectedEquipmentId = 0;
                 ClearInputs();
 
-                // Обновляем таблицу
                 LoadEquipmentData();
             }
             catch (Exception ex)
@@ -339,14 +320,12 @@ namespace inventory_of_equipment_in_classrooms
 
         private void btnDeleteData_Click(object sender, EventArgs e)
         {
-            // 1. Проверяем, выбрана ли строка
             if (dgvEquipment.SelectedRows.Count == 0)
             {
                 MessageBox.Show("Выберите запись для удаления.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 2. Стандартное подтверждение вместо окна из image_847cf8.png
             var result = MessageBox.Show("Вы уверены, что хотите окончательно удалить выбранную запись?",
                                          "Подтверждение удаления",
                                          MessageBoxButtons.YesNo,
@@ -379,23 +358,20 @@ namespace inventory_of_equipment_in_classrooms
 
         private void btnSearch_Click(object sender, EventArgs e)
         {
-            // Создаем форму поиска
             using (SearchForm searchForm = new SearchForm(_currentUserId, _selectedRoomId))
             {
-                // Ждем, пока пользователь нажмет "Поиск" (DialogResult.OK)
                 if (searchForm.ShowDialog() == DialogResult.OK)
                 {
                     var foundIds = searchForm.SelectedInventoryItemIds;
 
                     if (foundIds.Count > 0)
                     {
-                        // Фильтруем данные в DataGrid
                         DisplaySearchResults(foundIds);
                     }
                     else
                     {
                         MessageBox.Show("Записей не найдено.");
-                        LoadEquipmentData(); // Показываем все данные, если ничего не нашли
+                        LoadEquipmentData(); 
                     }
                 }
             }
@@ -406,14 +382,12 @@ namespace inventory_of_equipment_in_classrooms
             {
                 int selectedRoomId = Convert.ToInt32(cmbClassrooms.SelectedValue);
 
-                // Пропускаем системные значения (Все / Не назначена)
                 if (selectedRoomId <= 0) return;
 
                 try
                 {
                     using var dbContext = new DatabaseContent();
 
-                    // Ищем комнату напрямую в таблице room и смотрим её поле TeacherId
                     var room = dbContext.Rooms.FirstOrDefault(r => r.Id == selectedRoomId);
 
                     UnsubscribeFilterEvents();
@@ -422,14 +396,10 @@ namespace inventory_of_equipment_in_classrooms
                     {
                         int linkedTeacherId = room.TeacherId.Value;
 
-                        // Проверяем, загружен ли этот учитель в комбобокс преподавателей
-                        // (При условии, что элементы в cmbTeachers приводятся к твоему типу ссылок, например UserReference или User)
-                        // Если ты заполнял комбобокс через SelectedValue = Id, то можно сразу применить:
                         cmbTeachers.SelectedValue = linkedTeacherId;
                     }
                     else
                     {
-                        // Если преподаватель в базе равен NULL, сбрасываем на "Не назначен"
                         cmbTeachers.SelectedValue = -1;
                     }
 
@@ -577,7 +547,6 @@ namespace inventory_of_equipment_in_classrooms
 
             using var dbContext = GetDbContext();
 
-            // Проверяем, есть ли у него оборудование
             bool hasItems = dbContext.InventoryItems.Any(i => i.CustodianId == selectedTeacherId);
             if (hasItems)
             {
@@ -586,8 +555,6 @@ namespace inventory_of_equipment_in_classrooms
                     "Внимание", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation)
                     != DialogResult.Yes)
                     return;
-
-                // Снимаем ответственность
                 var items = dbContext.InventoryItems
                     .Where(i => i.CustodianId == selectedTeacherId).ToList();
                 items.ForEach(i => i.CustodianId = null);
@@ -622,7 +589,6 @@ namespace inventory_of_equipment_in_classrooms
             {
                 UnsubscribeFilterEvents();
                 LoadFilterData();
-                // Восстанавливаем выбор того же преподавателя
                 if (cmbTeachers.Items.Cast<UserReference>().Any(u => u.Id == selectedTeacherId))
                     cmbTeachers.SelectedValue = selectedTeacherId;
                 SubscribeFilterEvents();
@@ -635,7 +601,7 @@ namespace inventory_of_equipment_in_classrooms
         {
             try
             {
-                UnsubscribeFilterEvents(); // Отключаем события, чтобы избежать лишних перезагрузок
+                UnsubscribeFilterEvents();
 
                 using var dbContext = GetDbContext();
                 var classrooms = dbContext.Rooms
@@ -643,7 +609,6 @@ namespace inventory_of_equipment_in_classrooms
                     .OrderBy(r => r.Name)
                     .ToList();
 
-                // Добавляем системные пункты
                 classrooms.Insert(0, new RoomReference { Id = 0, Name = "Все аудитории" });
                 classrooms.Insert(1, new RoomReference { Id = -1, Name = "Не назначена" });
 
@@ -676,7 +641,6 @@ namespace inventory_of_equipment_in_classrooms
                     return;
                 }
 
-                // Создаём без Id — PostgreSQL сам назначит через sequence
                 var newRoom = new Room { RoomName = newName };
                 db.Rooms.Add(newRoom);
                 db.SaveChanges();
@@ -768,8 +732,7 @@ namespace inventory_of_equipment_in_classrooms
                 {
                     using (var dbContext = GetDbContext())
                     {
-                        // Используем прямой SQL, чтобы обойти ошибки валидации полей (как 'quantity')
-                        // Это удалит данные мгновенно и без лишних проверок C#
+
                         dbContext.Database.ExecuteSqlRaw("TRUNCATE TABLE savchenko_dm.inventory_item CASCADE");
 
                         MessageBox.Show("База данных успешно очищена.", "Успех");

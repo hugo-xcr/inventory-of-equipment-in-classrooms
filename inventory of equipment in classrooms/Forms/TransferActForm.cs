@@ -51,10 +51,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════════════
-        // НАВИГАЦИЯ МЕЖДУ ФОРМАМИ
-        // ═══════════════════════════════════════════════════════════════════════════
-
         private void BtnProfile_Click(object sender, EventArgs e)
         {
             this.Hide();
@@ -95,9 +91,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        // ═══════════════════════════════════════════════════════════════════════════
-        // ОСНОВНАЯ ЛОГИКА АКТА ОСМОТРА
-        // ═══════════════════════════════════════════════════════════════════════════
 
         private void LoadEquipment()
         {
@@ -169,7 +162,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 return;
             }
 
-            // Загружаем полные данные об оборудовании из БД
             using var db = new DatabaseContent();
             var item = db.InventoryItems
                 .Include(i => i.Custodian)
@@ -250,20 +242,19 @@ namespace inventory_of_equipment_in_classrooms.Forms
                     };
 
                     db.Documents.Add(doc);
-                    db.SaveChanges(); // теперь doc.Id заполнен из БД
+                    db.SaveChanges(); 
 
                     foreach (var item in _selectedItems)
                     {
                         db.DocumentItems.Add(new DocumentItem
                         {
-                            DocumentId = doc.Id, // берём реальный Id из БД
+                            DocumentId = doc.Id, 
                             ItemId = item.ItemId,
                             DefectDescription = item.Defects
                         });
                     }
                     db.SaveChanges();
 
-                    // Обновляем статус оборудования
                     var itemIds = _selectedItems.Select(x => x.ItemId).ToList();
                     var itemsToWriteOff = db.InventoryItems
                         .Where(i => itemIds.Contains(i.Id))
@@ -785,13 +776,11 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 new ParagraphProperties(new SpacingBetweenLines { After = "0" })
             );
 
-            // Обычная метка (например, "Инвентарный номер: ")
             para.AppendChild(new Run(
                 new RunProperties(new FontSize { Val = "24" }),
                 new Text(label) { Space = SpaceProcessingModeValues.Preserve }
             ));
 
-            // Жирное значение (например, "№123456")
             para.AppendChild(new Run(
                 new RunProperties(new Bold(), new FontSize { Val = "24" }),
                 new Text(value) { Space = SpaceProcessingModeValues.Preserve }

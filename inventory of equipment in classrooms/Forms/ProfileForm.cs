@@ -42,7 +42,7 @@ namespace inventory_of_equipment_in_classrooms
         {
             string newFirstName = txtFirstName.Text.Trim();
             string newSurname = txtSurname.Text.Trim();
-            string newEmail = txtEmail.Text.Trim(); // Добавим и почту, раз она есть в Load
+            string newEmail = txtEmail.Text.Trim(); 
 
             if (string.IsNullOrEmpty(newFirstName) || string.IsNullOrEmpty(newSurname))
             {
@@ -53,12 +53,10 @@ namespace inventory_of_equipment_in_classrooms
             try
             {
                 using var db = new DatabaseContent();
-                // Ищем пользователя
                 var user = db.Users.FirstOrDefault(u => u.Id == _currentUserId);
 
                 if (user != null)
                 {
-                    // Обновляем поля
                     user.Firstname = newFirstName;
                     user.Surname = newSurname;
                     user.Email = newEmail;
@@ -69,7 +67,6 @@ namespace inventory_of_equipment_in_classrooms
 
                     MessageBox.Show("Данные успешно сохранены!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // Обновляем локальную переменную и интерфейс
                     LoadUserData();
                 }
                 else

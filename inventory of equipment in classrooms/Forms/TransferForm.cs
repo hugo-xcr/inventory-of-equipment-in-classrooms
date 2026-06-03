@@ -110,7 +110,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
                         Получатель = d.Receiver != null
                             ? d.Receiver.Surname + " " + d.Receiver.Firstname
                             : "—",
-                        // Если одна позиция — показываем название, если больше — "N позиций"
                         Оборудование = d.DocumentItems.Count == 1
                             ? (d.DocumentItems.First().InventoryItem?.Name ?? "—")
                             : d.DocumentItems.Count == 0
@@ -152,7 +151,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
             using var dbContext = new DatabaseContent();
 
-            // 1. Загрузка пользователей с правильным склеиванием ФИО
             var users = dbContext.Users
                 .Select(u => new UserReference
                 {
@@ -162,13 +160,12 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 .OrderBy(u => u.FullName)
                 .ToList();
 
-            // 2. Загрузка комнат (используем правильное имя RoomName)
             var rooms = dbContext.Rooms
                 .Select(r => new RoomReference
                 {
                     Id = r.Id,
                     Name = r.RoomName,
-                    ResponsibleTeacherId = null // Оставляем null, раз поле временно отключено
+                    ResponsibleTeacherId = null 
                 })
                 .OrderBy(r => r.Name)
                 .ToList();
@@ -177,7 +174,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
             if (cmbTransferType != null) { cmbTransferType.DataSource = transferTypes; cmbTransferType.SelectedIndex = 0; }
 
-            // 3. Настройка выпадающего списка Отправителей
             if (cmbSender != null)
             {
                 cmbSender.DataSource = users.ToList();
@@ -186,7 +182,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 cmbSender.SelectedValue = _currentUserId;
             }
 
-            // 4. Настройка выпадающего списка Получателей
             if (cmbReceiver != null)
             {
                 var receivers = users.ToList();
@@ -197,16 +192,14 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 cmbReceiver.SelectedValue = -1;
             }
 
-            // 5. Настройка выпадающего списка Исходных комнат
             if (cmbRoomFrom != null)
             {
                 cmbRoomFrom.DataSource = rooms.ToList();
                 cmbRoomFrom.DisplayMember = "Name";
                 cmbRoomFrom.ValueMember = "Id";
-                cmbRoomFrom.SelectedIndex = -1; // Чтобы форма открывалась пустой, без предвыбора
+                cmbRoomFrom.SelectedIndex = -1; 
             }
 
-            // 6. Настройка выпадающего списка Конечных комнат
             if (cmbRoomTo != null)
             {
                 var toRooms = rooms.ToList();
@@ -471,7 +464,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             if (btnCreateWaybill != null) btnCreateWaybill.Enabled = true;
         }
 
-        // Принимает Models.Document (наша модель), не OpenXML Document
         public void GenerateWaybillDocxFromScratch(Models.Document document, List<InventoryItem> items, string filePath)
         {
             try
@@ -631,7 +623,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             row.Append(cell);
         }
 
-        // Принимает Models.Document
         private void CreateCompactSignaturesSection(Body body, Models.Document document)
         {
             // Используем PascalCase свойства навигации
@@ -676,7 +667,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
             foreach (var item in items)
             {
-                // Используем PascalCase: InitialCost, Name, CurrentState, Id, InventoryNumber
                 decimal itemCost = item.InitialCost.HasValue ? item.InitialCost.Value : 0;
                 totalCost += itemCost;
                 totalQuantity += 1;
@@ -968,7 +958,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             row.Append(cell);
         }
 
-        // Исправлено: принимает Models.Document вместо удалённого Waybill
+
         private void CreateCompactVerticalHeaderTable(Body body, Models.Document document)
         {
             string senderName = FormatUser(document.Sender);
@@ -997,7 +987,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             AddRow(table, "Главный администратор бюджетных средств (Учредитель):",
                 "Министерство науки и высшего образования Российской Федерации");
             AddRow(table, "Наименование бюджета:", "Федеральный бюджет");
-            // Используем навигационные свойства RoomFrom/RoomTo и их поле RoomNumber
             AddRow(table, "Отправитель:", document.RoomFrom?.RoomName ?? "—");
             AddRow(table, "Ответственное лицо - отправитель:", senderName);
             AddRow(table, "Получатель:", document.RoomTo?.RoomName ?? "—");

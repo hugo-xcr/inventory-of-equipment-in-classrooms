@@ -8,9 +8,7 @@ using Xunit;
 
 namespace InventorySystem.Tests
 {
-    // ═══════════════════════════════════════════════════════
-    // СЕРВИС ОПЕРАЦИЙ (Использует реальный DatabaseContent)
-    // ═══════════════════════════════════════════════════════
+
     public class TransferService
     {
         private readonly DatabaseContent _db;
@@ -20,9 +18,6 @@ namespace InventorySystem.Tests
             _db = db;
         }
 
-        /// <summary>
-        /// Перемещение или списание оборудования
-        /// </summary>
         public (bool success, string error) TransferEquipment(
             List<int> itemIds,
             int roomFromId,
@@ -96,9 +91,6 @@ namespace InventorySystem.Tests
             return (true, null);
         }
 
-        /// <summary>
-        /// Добавление нового оборудования в систему
-        /// </summary>
         public (bool success, string error) AddInventoryItem(string name, decimal price, string state, int roomId)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -110,12 +102,12 @@ namespace InventorySystem.Tests
             var newItem = new InventoryItem
             {
                 Name = name,
-                InitialCost = price, // Используем точное имя свойства из твоей модели
+                InitialCost = price,
                 CurrentState = state,
                 RoomId = roomId,
                 Quantity = 1,
                 InventoryNumber = "INV-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
-                DateOnAccounting = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc) // Сразу проставляем дату учета
+                DateOnAccounting = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc) 
             };
 
             _db.InventoryItems.Add(newItem);
@@ -124,9 +116,6 @@ namespace InventorySystem.Tests
             return (true, null);
         }
 
-        // ═══════════════════════════════════════════════════════
-        // ТЕСТОВЫЙ КОНТЕКСТ (Подменяет Npgsql на InMemory)
-        // ═══════════════════════════════════════════════════════
         public class TestDatabaseContent : DatabaseContent
         {
             private readonly string _dbName;
@@ -143,9 +132,6 @@ namespace InventorySystem.Tests
             }
         }
 
-        // ═══════════════════════════════════════════════════════
-        // ТЕСТЫ ОПЕРАЦИЙ
-        // ═══════════════════════════════════════════════════════
         public class TransferEquipmentTests : IDisposable
         {
             private readonly TestDatabaseContent _db;

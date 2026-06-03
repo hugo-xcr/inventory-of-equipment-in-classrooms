@@ -17,13 +17,13 @@ namespace inventory_of_equipment_in_classrooms.Models
         [Column("inventory_number")]
         public string InventoryNumber { get; set; } = string.Empty;
 
-        [Column("serial_number")] // Добавлено из скриншота БД
+        [Column("serial_number")] 
         public string? SerialNumber { get; set; }
 
         [Column("id_category")]
         public int? CategoryId { get; set; }
 
-        [Column("date_on_accounting")] // Исправлено под реальное имя в БД
+        [Column("date_on_accounting")] 
         public DateTime? DateOnAccounting { get; set; }
 
         [Column("initial_cost")]
@@ -38,7 +38,7 @@ namespace inventory_of_equipment_in_classrooms.Models
         [Column("custodian_id")]
         public int? CustodianId { get; set; }
 
-        [Column("unit_name")] // Поле из БД
+        [Column("unit_name")]
         public string? UnitName { get; set; }
 
         [Column("okei_code")] // Поле из БД
