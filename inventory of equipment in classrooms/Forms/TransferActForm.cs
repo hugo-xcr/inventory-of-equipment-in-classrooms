@@ -59,13 +59,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        private void BtnTransfer_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var transferForm = new TransferForm(_currentUserId);
-            transferForm.ShowDialog();
-            this.Close();
-        }
 
         private void BtnSearchForm_Click(object sender, EventArgs e)
         {
@@ -803,23 +796,21 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        private void btnTransfer_Click(object sender, EventArgs e)
+        private void BtnTransfer_Click(object sender, EventArgs e)
         {
-            var result = MessageBox.Show(
-                "Выберите тип документа:\n\nДа — Перемещение оборудования (Накладная)\nНет — Остаться в Акте осмотра",
-                "Выбор действия",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
-            if (result == DialogResult.Yes)
-            {
-                this.Hide();
-                var transferForm = new TransferForm(_currentUserId);
-                transferForm.ShowDialog();
-                this.Close();
-            }
+            SetActiveButton(btnTransfer);
+            var transferForm = new TransferForm(_currentUserId);
+            transferForm.ShowDialog();
+            SetActiveButton(btnProfile);
         }
-
+        private void SetActiveButton(Guna.UI2.WinForms.Guna2Button activeBtn)
+        {
+            var inactiveColor = System.Drawing.Color.FromArgb(0, 51, 153);
+            btnProfile.FillColor = btnEditCard.FillColor = btnTransfer.FillColor = inactiveColor;
+            btnProfile.ForeColor = btnEditCard.ForeColor = btnTransfer.ForeColor = System.Drawing.Color.White;
+            activeBtn.FillColor = System.Drawing.Color.White;
+            activeBtn.ForeColor = System.Drawing.Color.Black;
+        }
         private void btnEditCard_Click_1(object sender, EventArgs e)
         {
             this.Hide();

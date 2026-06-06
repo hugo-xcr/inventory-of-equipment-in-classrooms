@@ -326,7 +326,7 @@
             btnTransfer.Size = new Size(171, 56);
             btnTransfer.TabIndex = 0;
             btnTransfer.Text = "Передача оборудования";
-            btnTransfer.Click += btnTransfer_Click;
+            btnTransfer.Click += BtnTransfer_Click;
             // 
             // btnEditCard
             // 

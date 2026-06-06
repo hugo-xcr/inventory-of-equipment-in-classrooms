@@ -252,6 +252,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             btnTransfer.Size = new Size(205, 56);
             btnTransfer.TabIndex = 28;
             btnTransfer.Text = "Передача оборудования";
+            btnTransfer.Click += BtnTransfer_Click;
             // 
             // pictureBox3
             // 

@@ -102,34 +102,9 @@ namespace inventory_of_equipment_in_classrooms
         private void BtnTransfer_Click(object sender, EventArgs e)
         {
             SetActiveButton(btnTransfer);
-
-            var result = MessageBox.Show(
-                "Выберите тип документа:\n\nДа — Перемещение оборудования (Накладная)\nНет — Активация автоматического акта",
-                "Выбор действия",
-                MessageBoxButtons.YesNoCancel,
-                MessageBoxIcon.Question);
-
-            if (result == DialogResult.Cancel)
-            {
-                SetActiveButton(btnProfile);
-                return;
-            }
-
-            Form targetForm;
-
-            if (result == DialogResult.Yes)
-            {
-                targetForm = new TransferForm(_currentUserId);
-            }
-            else
-            {
-                targetForm = new TransferActForm(_currentUserId);
-            }
-
-            targetForm.FormClosed += (s, args) => { this.Show(); SetActiveButton(btnProfile); };
-
-            this.Hide();
-            targetForm.Show();
+            var transferForm = new TransferForm(_currentUserId);
+            transferForm.ShowDialog();
+            SetActiveButton(btnProfile);
         }
 
         private void BtnImport_Click(object sender, EventArgs e)

@@ -52,7 +52,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             }
 
             if (btnSelectEquipment != null) btnSelectEquipment.Click += BtnSelectEquipment_Click;
-            if (btnCreateWaybill != null) btnCreateWaybill.Click += BtnCreateWaybill_Click;
             if (cmbRoomFrom != null) cmbRoomFrom.SelectedIndexChanged += CmbRoomFrom_SelectedIndexChanged;
             if (cmbRoomTo != null) cmbRoomTo.SelectedIndexChanged += CmbRoomTo_SelectedIndexChanged;
             if (btnProfile != null) btnProfile.Click += BtnProfile_Click;
@@ -165,7 +164,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 {
                     Id = r.Id,
                     Name = r.RoomName,
-                    ResponsibleTeacherId = null 
+                    ResponsibleTeacherId = null
                 })
                 .OrderBy(r => r.Name)
                 .ToList();
@@ -197,7 +196,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 cmbRoomFrom.DataSource = rooms.ToList();
                 cmbRoomFrom.DisplayMember = "Name";
                 cmbRoomFrom.ValueMember = "Id";
-                cmbRoomFrom.SelectedIndex = -1; 
+                cmbRoomFrom.SelectedIndex = -1;
             }
 
             if (cmbRoomTo != null)
@@ -432,13 +431,24 @@ namespace inventory_of_equipment_in_classrooms.Forms
                     .ToList();
 
                 string downloadsPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string docxFilePath = Path.Combine(downloadsPath, $"Документ_{newDocument.Id}_{DateTime.Now:yyyyMMdd_HHmmss}.docx");
 
-                if (docData != null)
-                    GenerateWaybillDocxFromScratch(docData, itemsData, docxFilePath);
+                if (transferType == "Временная передача")
+                {
+                    string senderShort = docData?.Sender != null ? docData.Sender.Surname : "Неизвестно";
+                    string receiverShort = docData?.Receiver != null ? docData.Receiver.Surname : "Неизвестно";
+                    string xlsxFilePath = Path.Combine(downloadsPath,
+                        $"Временная передача_{senderShort}-{receiverShort}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+                    if (docData != null)
+                        GenerateTransferActExcel(docData, itemsData, xlsxFilePath);
+                }
+                else
+                {
+                    string docxFilePath = Path.Combine(downloadsPath,
+                        $"Документ_{newDocument.Id}_{DateTime.Now:yyyyMMdd_HHmmss}.docx");
+                    if (docData != null)
+                        GenerateWaybillDocxFromScratch(docData, itemsData, docxFilePath);
+                }
 
-                MessageBox.Show($"Документ №{newDocument.Id} успешно создан.",
-                    "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 _selectedEquipmentIds.Clear();
                 UpdateSelectedCountLabel();
@@ -492,6 +502,10 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
                     CreateCorrectItemsTable(body, items);
 
+                    body.AppendChild(new Paragraph(new Run(new Text(""))));
+
+                    CreateCompactSignaturesSection(body, document);
+
                     mainPart.Document.AppendChild(body);
                     mainPart.Document.Save();
                 }
@@ -515,12 +529,12 @@ namespace inventory_of_equipment_in_classrooms.Forms
         private const string RESPONSIBLE_JOB_TITLE = "Бухгалтер";
         private const string RESPONSIBLE_FALLBACK_FULL_NAME = "А. С. Ильина";
 
-        private void CreateSignatureLine(Body body, string type, string positionText, string nameText, string phone, bool showContactRow, bool isResponsible = false)
+        private void CreateSignatureLine(Body body, string type, string positionText, string nameText, string phone, bool showContactRow, bool isResponsible = false, string dateStr = "")
         {
             Table table = new Table();
 
             TableProperties tableProperties = new TableProperties(
-                new TableWidth() { Width = "100%", Type = TableWidthUnitValues.Pct },
+                new TableWidth() { Width = "9000", Type = TableWidthUnitValues.Dxa },
                 new TableLayout() { Type = TableLayoutValues.Fixed }
             );
 
@@ -536,48 +550,98 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
             TableGrid tableGrid = new TableGrid(
                 new GridColumn() { Width = "2000" },
+                new GridColumn() { Width = "2500" },
                 new GridColumn() { Width = "2000" },
-                new GridColumn() { Width = "2000" },
-                new GridColumn() { Width = "3000" }
+                new GridColumn() { Width = "2500" }
             );
             table.Append(tableProperties, tableGrid);
 
+            // Строка с данными
             TableRow dataRow = new TableRow();
-            AddTableCellNoParagraphIndent(dataRow, type, JustificationValues.Left, "10", false, false);
-            AddTableCellNoParagraphIndent(dataRow, positionText, JustificationValues.Center, "10", true, true);
-            AddTableCellNoParagraphIndent(dataRow, "_____________________", JustificationValues.Center, "10", true, true);
-            AddTableCellNoParagraphIndent(dataRow, nameText, JustificationValues.Center, "10", true, true);
+            AddSignatureCell(dataRow, type, JustificationValues.Left, false);
+            AddSignatureCell(dataRow, positionText, JustificationValues.Center, true);
+            AddSignatureCell(dataRow, "_____________________", JustificationValues.Center, true);
+            AddSignatureCell(dataRow, nameText, JustificationValues.Center, true);
             table.Append(dataRow);
 
+            // Строка с подписями
             TableRow captionRow = new TableRow();
-            AddTableCellNoParagraphIndent(captionRow, "", JustificationValues.Left, "10", false, false);
-            AddTableCellNoParagraphIndent(captionRow, "(должность)", JustificationValues.Center, "10", false, false);
-            AddTableCellNoParagraphIndent(captionRow, "(подпись)", JustificationValues.Center, "10", false, false);
-            AddTableCellNoParagraphIndent(captionRow, "(расшифровка подписи)", JustificationValues.Center, "10", false, false);
+            AddSignatureCell(captionRow, "", JustificationValues.Left, false);
+            AddSignatureCell(captionRow, "(должность)", JustificationValues.Center, false);
+            AddSignatureCell(captionRow, "(подпись)", JustificationValues.Center, false);
+            AddSignatureCell(captionRow, "(расшифровка подписи)", JustificationValues.Center, false);
             table.Append(captionRow);
 
             if (showContactRow)
             {
-                TableRow contactLineRow = new TableRow();
-                AddMergedTableCellNoParagraphIndent(contactLineRow, "______________________________", JustificationValues.Center, "10", true, 2);
-                AddMergedTableCellNoParagraphIndent(contactLineRow, "s252734@std.novsu.ru", JustificationValues.Center, "10", true, 2);
-                table.Append(contactLineRow);
+                TableRow contactRow = new TableRow();
+                AddMergedSignatureCell(contactRow, "______________________________", JustificationValues.Center, true, 2);
+                AddMergedSignatureCell(contactRow, STATIC_EMAIL, JustificationValues.Center, true, 2);
+                table.Append(contactRow);
 
                 TableRow contactCaptionRow = new TableRow();
-                AddMergedTableCellNoParagraphIndent(contactCaptionRow, "(номер контактного телефона)", JustificationValues.Center, "10", false, 2);
-                AddMergedTableCellNoParagraphIndent(contactCaptionRow, "(электронный адрес)", JustificationValues.Center, "10", false, 2);
+                AddMergedSignatureCell(contactCaptionRow, "(номер контактного телефона)", JustificationValues.Center, false, 2);
+                AddMergedSignatureCell(contactCaptionRow, "(электронный адрес)", JustificationValues.Center, false, 2);
                 table.Append(contactCaptionRow);
 
-                if (isResponsible)
+                if (isResponsible && !string.IsNullOrEmpty(dateStr))
                 {
                     TableRow dateRow = new TableRow();
-                    AddMergedTableCellNoParagraphIndent(dateRow, "\"12\"  11  2025 г.", JustificationValues.Center, "10", true, 4);
+                    AddMergedSignatureCell(dateRow, dateStr, JustificationValues.Center, true, 4);
                     table.Append(dateRow);
                 }
             }
 
             body.AppendChild(table);
             body.AppendChild(new Paragraph(new Run(new Text(" "))));
+        }
+
+        private void AddSignatureCell(TableRow row, string text, JustificationValues alignment, bool underline)
+        {
+            TableCell cell = new TableCell(new TableCellProperties(
+                new TableCellVerticalAlignment() { Val = TableVerticalAlignmentValues.Center }
+            ));
+
+            Paragraph paragraph = new Paragraph(new ParagraphProperties(
+                new Justification() { Val = alignment },
+                new SpacingBetweenLines() { After = "0" },
+                new Indentation() { Left = "0", Right = "0", FirstLine = "0" }
+            ));
+
+            Run run = new Run();
+            RunProperties props = new RunProperties(new FontSize() { Val = "16" });
+            if (underline) props.Underline = new Underline() { Val = UnderlineValues.Single };
+            run.RunProperties = props;
+            run.AppendChild(new Text(text));
+
+            paragraph.Append(run);
+            cell.Append(paragraph);
+            row.Append(cell);
+        }
+
+        private void AddMergedSignatureCell(TableRow row, string text, JustificationValues alignment, bool underline, int colSpan)
+        {
+            TableCell cell = new TableCell();
+            TableCellProperties props = new TableCellProperties(
+                new GridSpan() { Val = colSpan },
+                new TableCellVerticalAlignment() { Val = TableVerticalAlignmentValues.Center }
+            );
+            cell.Append(props);
+
+            Paragraph paragraph = new Paragraph(new ParagraphProperties(
+                new Justification() { Val = alignment },
+                new SpacingBetweenLines() { After = "0" }
+            ));
+
+            Run run = new Run();
+            RunProperties runProps = new RunProperties(new FontSize() { Val = "16" });
+            if (underline) runProps.Underline = new Underline() { Val = UnderlineValues.Single };
+            run.RunProperties = runProps;
+            run.Append(new Text(text));
+
+            paragraph.Append(run);
+            cell.Append(paragraph);
+            row.Append(cell);
         }
 
         private void AddTableCellNoParagraphIndent(TableRow row, string text, JustificationValues alignment, string fontSize, bool underline, bool addSpaceForInput)
@@ -625,21 +689,25 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
         private void CreateCompactSignaturesSection(Body body, Models.Document document)
         {
-            // Используем PascalCase свойства навигации
             string senderName = document.Sender != null
-                ? $"{document.Sender.Surname} {document.Sender.Firstname[0]}. {document.Sender.Patronymic?[0]}."
+                ? $"{document.Sender.Surname} {document.Sender.Firstname?[0]}. {(document.Sender.Patronymic?.Length > 0 ? document.Sender.Patronymic[0] + "." : "")}"
                 : "________________";
 
             string receiverName = document.Receiver != null
-                ? $"{document.Receiver.Surname} {document.Receiver.Firstname[0]}. {document.Receiver.Patronymic?[0]}."
+                ? $"{document.Receiver.Surname} {document.Receiver.Firstname?[0]}. {(document.Receiver.Patronymic?.Length > 0 ? document.Receiver.Patronymic[0] + "." : "")}"
                 : "________________";
 
-            string senderJob = document.Sender?.JobTitle?.Name ?? "Ответственное лицо";
-            string receiverJob = document.Receiver?.JobTitle?.Name ?? "Принимающее лицо";
+            string senderJob = document.Sender?.JobTitle?.Name ?? "Преподаватель";
+            string receiverJob = document.Receiver?.JobTitle?.Name ?? "Преподаватель";
 
-            CreateSignatureLine(body, "Передал", senderJob, senderName, "", false);
-            CreateSignatureLine(body, "Принял", receiverJob, receiverName, "", false);
-            CreateSignatureLine(body, "Ответственный Исполнитель", "Бухгалтер", "А. С. ИЛЬИНА", "(номер контактного телефона)", true, true);
+            // Берём реальную дату документа
+            var russianCulture = new System.Globalization.CultureInfo("ru-RU");
+            string todayDate = $"\"{document.DocDate:dd}\" {document.DocDate.ToString("MM", russianCulture)} {document.DocDate:yyyy} г.";
+
+            body.AppendChild(new Paragraph(new Run(new Text(""))));
+            CreateSignatureLine(body, "Передал", senderJob, senderName, "", false, false, todayDate);
+            CreateSignatureLine(body, "Принял", receiverJob, receiverName, "", false, false, todayDate);
+            CreateSignatureLine(body, "Ответственный Исполнитель", "Бухгалтер", "А. С. ИЛЬИНА", "", true, true, todayDate);
         }
 
         private void CreateCorrectItemsTable(Body body, List<InventoryItem> items)
@@ -756,25 +824,25 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
             TableRow headerRow1 = new TableRow();
 
-            AddMergedHeaderCell(headerRow1, "Материальные ценности", 2, 1, "10", true);
-            AddMergedHeaderCell(headerRow1, "Код строки", 1, 2, "10", true);
-            AddMergedHeaderCell(headerRow1, "Учетный номер", 2, 1, "10", true);
-            AddMergedHeaderCell(headerRow1, "Единица измерения", 2, 1, "10", true);
-            AddMergedHeaderCell(headerRow1, "Количество", 1, 2, "10", true);
-            AddMergedHeaderCell(headerRow1, "Цена/\nПервоначальная\n(балансовая)\nстоимость", 1, 2, "10", true);
-            AddMergedHeaderCell(headerRow1, "Стоимость объекта\n(группы объектов)", 1, 2, "10", true);
+            AddMergedHeaderCell(headerRow1, "Материальные ценности", 2, 1, "16", true);
+            AddMergedHeaderCell(headerRow1, "Код строки", 1, 2, "16", true);
+            AddMergedHeaderCell(headerRow1, "Учетный номер", 2, 1, "16", true);
+            AddMergedHeaderCell(headerRow1, "Единица измерения", 2, 1, "16", true);
+            AddMergedHeaderCell(headerRow1, "Количество", 1, 2, "16", true);
+            AddMergedHeaderCell(headerRow1, "Цена/\nПервоначальная\n(балансовая)\nстоимость", 1, 2, "16", true);
+            AddMergedHeaderCell(headerRow1, "Стоимость объекта\n(группы объектов)", 1, 2, "16", true);
 
             table.Append(headerRow1);
 
             TableRow headerRow2 = new TableRow();
 
-            AddNormalHeaderCellNoNumber(headerRow2, "наименование основное", "10", true);
-            AddNormalHeaderCellNoNumber(headerRow2, "наименование дополнительное\n(код) (при наличии)", "10", true);
+            AddNormalHeaderCellNoNumber(headerRow2, "наименование основное", "16", true);
+            AddNormalHeaderCellNoNumber(headerRow2, "наименование дополнительное\n(код) (при наличии)", "16", true);
             AddVerticalMergeContinueCell(headerRow2);
-            AddNormalHeaderCellNoNumber(headerRow2, "инвентарный/\nноменклатурный", "10", true);
-            AddNormalHeaderCellNoNumber(headerRow2, "паспорта\n(иной)", "10", true);
-            AddNormalHeaderCellNoNumber(headerRow2, "наименование", "10", true);
-            AddNormalHeaderCellNoNumber(headerRow2, "код по\nОКЕИ", "10", true);
+            AddNormalHeaderCellNoNumber(headerRow2, "инвентарный/\nноменклатурный", "16", true);
+            AddNormalHeaderCellNoNumber(headerRow2, "паспорта\n(иной)", "16", true);
+            AddNormalHeaderCellNoNumber(headerRow2, "наименование", "16", true);
+            AddNormalHeaderCellNoNumber(headerRow2, "код по\nОКЕИ", "16", true);
             AddVerticalMergeContinueCell(headerRow2);
             AddVerticalMergeContinueCell(headerRow2);
             AddVerticalMergeContinueCell(headerRow2);
@@ -784,7 +852,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             TableRow headerRow3 = new TableRow();
 
             for (int i = 1; i <= 10; i++)
-                AddNumberHeaderCell(headerRow3, i.ToString(), "10", true);
+                AddNumberHeaderCell(headerRow3, i.ToString(), "16", true);
 
             table.Append(headerRow3);
         }
@@ -914,7 +982,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             );
 
             Run r = new Run(
-                new RunProperties(new FontSize() { Val = "10" })
+                new RunProperties(new FontSize() { Val = "16" })
             );
 
             foreach (var line in text.Split('\n'))
@@ -944,7 +1012,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             );
 
             Run r = new Run(
-                new RunProperties(new FontSize() { Val = "10" })
+                new RunProperties(new FontSize() { Val = "16" })
             );
 
             foreach (var line in text.Split('\n'))
@@ -1004,7 +1072,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             Run labelRun = new Run(new Text(label))
             {
                 RunProperties = new RunProperties(
-                    new FontSize() { Val = "10" }
+                    new FontSize() { Val = "16" }
                 )
             };
 
@@ -1031,7 +1099,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             {
                 RunProperties = new RunProperties(
                     new Underline() { Val = UnderlineValues.Single },
-                    new FontSize() { Val = "10" }
+                    new FontSize() { Val = "16" }
                 )
             };
 
@@ -1068,7 +1136,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
             Run run = new Run();
             RunProperties runProperties = new RunProperties();
-            runProperties.FontSize = new FontSize() { Val = "16" };
+            runProperties.FontSize = new FontSize() { Val = "20" };
 
             if (bold)
                 runProperties.Bold = new Bold();
@@ -1092,7 +1160,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
             Run run = new Run();
             RunProperties runProperties = new RunProperties();
-            runProperties.FontSize = new FontSize() { Val = "10" };
+            runProperties.FontSize = new FontSize() { Val = "20" };
 
             if (bold)
                 runProperties.Bold = new Bold();
@@ -1222,12 +1290,155 @@ namespace inventory_of_equipment_in_classrooms.Forms
             }
         }
 
+        public void GenerateTransferActExcel(Models.Document document, List<InventoryItem> items, string filePath)
+        {
+            using var workbook = new ClosedXML.Excel.XLWorkbook();
+            var ws = workbook.Worksheets.Add("Акт");
+
+            var ru = new System.Globalization.CultureInfo("ru-RU");
+            string senderName = FormatUser(document.Sender);
+            string receiverName = FormatUser(document.Receiver);
+            string fromRoom = document.RoomFrom?.RoomName ?? "—";
+            string toRoom = document.RoomTo?.RoomName ?? "—";
+            string dateFrom = document.DocDate.ToString("dd.MM.yyyy", ru);
+            string dateTo = document.ReturnDate.HasValue
+                ? document.ReturnDate.Value.ToString("dd.MM.yyyy", ru)
+                : "___________";
+
+            ws.Style.Font.FontName = "Times New Roman";
+            ws.Style.Font.FontSize = 12;
+
+            ws.Cell("A1").Value = "АКТ ПРИЕМА-ПЕРЕДАЧИ НА ВРЕМЕННОЕ ПОЛЬЗОВАНИЕ";
+            ws.Range("A1:G1").Merge();
+            ws.Cell("A1").Style.Font.Bold = true;
+            ws.Cell("A1").Style.Font.FontSize = 14;
+            ws.Cell("A1").Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+
+            string intro = $"Настоящий акт составлен в том, что преподаватель Политехнического колледжа НовГУ " +
+                           $"{senderName} передает преподавателю Политехнического колледжа НовГУ {receiverName} " +
+                           $"оборудование в следующем составе:";
+            ws.Cell("A2").Value = intro;
+            ws.Range("A2:G2").Merge();
+            ws.Cell("A2").Style.Alignment.WrapText = true;
+            ws.Row(2).Height = 50;
+
+            int headerRow = 4;
+            var headers = new[]
+            {
+        "№", "Наименование", "Инв. номер",
+        "Дата постановки на учёт", "Начальная стоимость", "Кол-во", "Остаточная стоимость"
+    };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = ws.Cell(headerRow, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.NoColor;
+                cell.Style.Font.FontColor = ClosedXML.Excel.XLColor.Black;
+                cell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
+                cell.Style.Alignment.WrapText = true;
+                cell.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            }
+            ws.Row(headerRow).Height = 40;
+
+            int dataRow = headerRow + 1;
+            decimal totalInitial = 0;
+            int num = 1;
+
+            foreach (var item in items)
+            {
+                decimal initial = item.InitialCost ?? 0;
+                totalInitial += initial;
+
+                ws.Cell(dataRow, 1).Value = num++;
+                ws.Cell(dataRow, 2).Value = item.Name ?? "—";
+                ws.Cell(dataRow, 3).Value = item.InventoryNumber ?? "—";
+                ws.Cell(dataRow, 4).Value = item.DateOnAccounting.HasValue
+                    ? item.DateOnAccounting.Value.ToString("dd.MM.yyyy", ru)
+                    : "—";
+                ws.Cell(dataRow, 5).Value = initial;
+                ws.Cell(dataRow, 5).Style.NumberFormat.Format = "#,##0.00";
+                ws.Cell(dataRow, 6).Value = 1;
+                ws.Cell(dataRow, 7).Value = 0;
+                ws.Cell(dataRow, 7).Style.NumberFormat.Format = "#,##0.00";
+
+                ws.Cell(dataRow, 2).Style.Alignment.WrapText = true;
+                ws.Range(dataRow, 1, dataRow, 7).Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+                ws.Range(dataRow, 1, dataRow, 7).Style.Border.InsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+                dataRow++;
+            }
+
+            ws.Cell(dataRow, 1).Value = "Итого:";
+            ws.Range(dataRow, 1, dataRow, 4).Merge();
+            ws.Cell(dataRow, 1).Style.Font.Bold = true;
+            ws.Cell(dataRow, 1).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+            ws.Cell(dataRow, 5).Value = totalInitial;
+            ws.Cell(dataRow, 5).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(dataRow, 5).Style.Font.Bold = true;
+            ws.Cell(dataRow, 6).Value = items.Count;
+            ws.Cell(dataRow, 6).Style.Font.Bold = true;
+            ws.Cell(dataRow, 6).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
+            ws.Cell(dataRow, 7).Value = 0;
+            ws.Cell(dataRow, 7).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(dataRow, 7).Style.Font.Bold = true;
+            ws.Range(dataRow, 1, dataRow, 7).Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            ws.Range(dataRow, 1, dataRow, 7).Style.Border.InsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+            int periodRow = dataRow + 1;
+            ws.Cell(periodRow, 1).Value = $"Период передачи: с {dateFrom} по {dateTo}";
+            ws.Range(periodRow, 1, periodRow, 7).Merge();
+            ws.Cell(periodRow, 1).Style.Font.Bold = true;
+            ws.Cell(periodRow, 1).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Left;
+
+            int sigRow = periodRow + 2;
+            ws.Cell(sigRow, 1).Value = "Передал:";
+            ws.Cell(sigRow, 1).Style.Font.Bold = true;
+            ws.Cell(sigRow, 3).Value = senderName;
+            ws.Cell(sigRow, 3).Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            ws.Range(sigRow, 3, sigRow, 5).Merge();
+
+            ws.Cell(sigRow + 2, 1).Value = "Принял:";
+            ws.Cell(sigRow + 2, 1).Style.Font.Bold = true;
+            ws.Cell(sigRow + 2, 3).Value = receiverName;
+            ws.Cell(sigRow + 2, 3).Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+            ws.Range(sigRow + 2, 3, sigRow + 2, 5).Merge();
+
+            ws.Column(1).Width = 5;
+            ws.Column(2).Width = 45;
+            ws.Column(3).Width = 18;
+            ws.Column(4).Width = 18;
+            ws.Column(5).Width = 20;
+            ws.Column(6).Width = 8;
+            ws.Column(7).Width = 20;
+
+            workbook.SaveAs(filePath);
+        }
         private void btnEditCard_Click(object sender, EventArgs e)
         {
             this.Hide();
             var editForm = new EditCardForm(_currentUserId);
             editForm.ShowDialog();
             this.Close();
+        }
+
+        private void BtnTransfer_Click(object sender, EventArgs e)
+        {
+            SetActiveButton(btnTransfer);
+            var transferForm = new TransferForm(_currentUserId);
+            transferForm.ShowDialog();
+            SetActiveButton(btnProfile);
+        }
+
+        private void SetActiveButton(Guna.UI2.WinForms.Guna2Button activeBtn)
+        {
+            var inactiveColor = System.Drawing.Color.FromArgb(0, 51, 153);
+            btnProfile.FillColor = btnEditCard.FillColor = btnTransfer.FillColor = inactiveColor;
+            btnProfile.ForeColor = btnEditCard.ForeColor = btnTransfer.ForeColor = System.Drawing.Color.White;
+            activeBtn.FillColor = System.Drawing.Color.White;
+            activeBtn.ForeColor = System.Drawing.Color.Black;
         }
     }
 }

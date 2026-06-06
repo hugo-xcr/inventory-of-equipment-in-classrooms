@@ -41,10 +41,9 @@ namespace inventory_of_equipment_in_classrooms.Models
         [Column("unit_name")]
         public string? UnitName { get; set; }
 
-        [Column("okei_code")] // Поле из БД
+        [Column("okei_code")]
         public string? OkeiCode { get; set; }
 
-        // Навигационные свойства
         [ForeignKey("CategoryId")]
         public virtual ItemCategory? Category { get; set; }
 

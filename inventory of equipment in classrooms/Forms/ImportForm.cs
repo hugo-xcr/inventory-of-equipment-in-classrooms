@@ -59,14 +59,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        private void BtnTransfer_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var transferForm = new TransferForm(_currentUserId);
-            transferForm.ShowDialog();
-            this.Close();
-        }
-
         private void BtnSearchForm_Click(object sender, EventArgs e)
         {
             this.Hide();
@@ -226,12 +218,20 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        private void btnTransfer_Click(object sender, EventArgs e)
+        private void BtnTransfer_Click(object sender, EventArgs e)
         {
-            this.Hide();
+            SetActiveButton(btnTransfer);
             var transferForm = new TransferForm(_currentUserId);
             transferForm.ShowDialog();
-            this.Close();
+            SetActiveButton(btnProfile);
+        }
+        private void SetActiveButton(Guna.UI2.WinForms.Guna2Button activeBtn)
+        {
+            var inactiveColor = System.Drawing.Color.FromArgb(0, 51, 153);
+            btnProfile.FillColor = btnEditCard.FillColor = btnTransfer.FillColor = inactiveColor;
+            btnProfile.ForeColor = btnEditCard.ForeColor = btnTransfer.ForeColor = System.Drawing.Color.White;
+            activeBtn.FillColor = System.Drawing.Color.White;
+            activeBtn.ForeColor = System.Drawing.Color.Black;
         }
 
         private void guna2Button1_Click(object sender, EventArgs e)

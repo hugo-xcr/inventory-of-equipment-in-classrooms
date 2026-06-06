@@ -482,22 +482,10 @@ namespace inventory_of_equipment_in_classrooms
         private void BtnTransfer_Click(object sender, EventArgs e)
         {
             SetActiveButton(btnTransfer);
-
-            try
-            {
-                var transferForm = new TransferForm(_currentUserId);
-                transferForm.ShowDialog();
-
-                SetActiveButton(btnEditCard);
-                LoadEquipmentData(); 
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка");
-                SetActiveButton(btnEditCard);
-            }
+            var transferForm = new TransferForm(_currentUserId);
+            transferForm.ShowDialog();
+            SetActiveButton(btnProfile);
         }
-
         private void PBoxLogo_MouseEnter(object sender, EventArgs e) => pnlTopBar.BackColor = HoverPanelColor;
         private void PBoxLogo_MouseLeave(object sender, EventArgs e) => pnlTopBar.BackColor = DefaultBlueColor;
         private void cmbClassrooms_SelectedIndexChanged(object sender, EventArgs e) {
