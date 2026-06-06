@@ -9,7 +9,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
         private System.ComponentModel.IContainer components = null;
         private Guna2Panel pnlTopMenu;
 
-        // ОСТАВЛЯЕМ ТОЛЬКО ОДНО ОБЪЯВЛЕНИЕ ДЛЯ КАЖДОГО КОМПОНЕНТА
         private Guna2Button btnTransfer; // <--- Оставляем это объявление
 
         private Guna2ComboBox cmbTransferType;
@@ -213,7 +212,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             guna2Button1.ShadowDecoration.CustomizableEdges = customizableEdges2;
             guna2Button1.Size = new Size(212, 56);
             guna2Button1.TabIndex = 34;
-            guna2Button1.Text = "Списание/Передача во временное пользование";
+            guna2Button1.Text = "Списание";
             guna2Button1.Click += guna2Button1_Click;
             // 
             // btnImport
@@ -233,7 +232,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             btnImport.Size = new Size(189, 56);
             btnImport.TabIndex = 33;
             btnImport.Text = "Импорт файла";
-            btnImport.Click += btnImport_Click;
+            btnImport.Click += BtnImport_Click;
             // 
             // btnTransfer
             // 
@@ -252,7 +251,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             btnTransfer.Size = new Size(205, 56);
             btnTransfer.TabIndex = 28;
             btnTransfer.Text = "Передача оборудования";
-            btnTransfer.Click += BtnTransfer_Click;
             // 
             // pictureBox3
             // 

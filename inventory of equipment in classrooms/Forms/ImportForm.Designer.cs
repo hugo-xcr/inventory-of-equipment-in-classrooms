@@ -220,7 +220,7 @@
             guna2Button1.ShadowDecoration.CustomizableEdges = customizableEdges4;
             guna2Button1.Size = new Size(212, 56);
             guna2Button1.TabIndex = 29;
-            guna2Button1.Text = "Списание/Передача во временное пользование";
+            guna2Button1.Text = "Списание";
             guna2Button1.Click += guna2Button1_Click;
             // 
             // pictureBox5
@@ -307,7 +307,7 @@
             btnProfile.Size = new Size(171, 56);
             btnProfile.TabIndex = 20;
             btnProfile.Text = "Профиль";
-            btnProfile.Click += btnProfile_Click;
+            btnProfile.Click += BtnProfile_Click;
             // 
             // btnTransfer
             // 

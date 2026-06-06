@@ -259,7 +259,7 @@
             btnExport.Size = new Size(189, 56);
             btnExport.TabIndex = 39;
             btnExport.Text = "Импорт файла";
-            btnExport.Click += btnExport_Click;
+            btnExport.Click += BtnImport_Click;
             // 
             // pictureBox1
             // 
@@ -876,6 +876,7 @@
             label6.Size = new Size(81, 20);
             label6.TabIndex = 49;
             label6.Text = "Код ОКЕИ:";
+            label6.Click += label6_Click;
             // 
             // btnEditRoom
             // 

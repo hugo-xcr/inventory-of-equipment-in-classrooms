@@ -226,7 +226,7 @@
             guna2Button1.ShadowDecoration.CustomizableEdges = customizableEdges2;
             guna2Button1.Size = new Size(250, 56);
             guna2Button1.TabIndex = 29;
-            guna2Button1.Text = "Списание/Передача во временное пользование";
+            guna2Button1.Text = "Списание";
             // 
             // pictureBox5
             // 
@@ -258,7 +258,7 @@
             btnExport.Size = new Size(189, 56);
             btnExport.TabIndex = 27;
             btnExport.Text = "Импорт файла";
-            btnExport.Click += btnImport_Click;
+            btnExport.Click += BtnImport_Click;
             // 
             // pictureBox3
             // 
@@ -314,7 +314,7 @@
             btnProfile.Size = new Size(171, 56);
             btnProfile.TabIndex = 20;
             btnProfile.Text = "Профиль";
-            btnProfile.Click += btnProfile_Click_1;
+            btnProfile.Click += BtnProfile_Click;
             // 
             // btnTransfer
             // 
@@ -352,7 +352,7 @@
             btnEditCard.Size = new Size(243, 56);
             btnEditCard.TabIndex = 1;
             btnEditCard.Text = "Редактирование инвентарной карточки";
-            btnEditCard.Click += btnEditCard_Click_1;
+            btnEditCard.Click += BtnEditCard_Click;
             // 
             // pnlButtons
             // 

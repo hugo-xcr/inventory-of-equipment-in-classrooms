@@ -1,17 +1,24 @@
 namespace inventory_of_equipment_in_classrooms
 {
-    internal static class Program
+    static class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            Application.Run(new LoginForm());
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            var context = new ApplicationContext();
+
+            var loginForm = new LoginForm();
+            loginForm.FormClosed += (s, e) =>
+            {
+                if (Application.OpenForms.Count == 0)
+                    context.ExitThread();
+            };
+            loginForm.Show();
+
+            Application.Run(context);
         }
     }
 }

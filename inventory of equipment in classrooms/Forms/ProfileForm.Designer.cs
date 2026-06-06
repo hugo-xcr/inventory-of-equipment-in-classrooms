@@ -66,7 +66,7 @@
             pictureBox3 = new PictureBox();
             pnlTopBar = new Panel();
             pictureBox6 = new PictureBox();
-            btnTransferActForm = new Guna.UI2.WinForms.Guna2Button();
+            guna2Button1 = new Guna.UI2.WinForms.Guna2Button();
             pictureBox5 = new PictureBox();
             btnExport = new Guna.UI2.WinForms.Guna2Button();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
@@ -284,7 +284,6 @@
             btnProfile.Size = new Size(171, 56);
             btnProfile.TabIndex = 20;
             btnProfile.Text = "Профиль";
-            btnProfile.Click += BtnProfile_Click;
             // 
             // pictureBox1
             // 
@@ -339,7 +338,7 @@
             // 
             pnlTopBar.BackColor = Color.FromArgb(0, 51, 153);
             pnlTopBar.Controls.Add(pictureBox6);
-            pnlTopBar.Controls.Add(btnTransferActForm);
+            pnlTopBar.Controls.Add(guna2Button1);
             pnlTopBar.Controls.Add(pictureBox5);
             pnlTopBar.Controls.Add(btnExport);
             pnlTopBar.Controls.Add(pictureBox3);
@@ -368,24 +367,24 @@
             pictureBox6.TabIndex = 30;
             pictureBox6.TabStop = false;
             // 
-            // btnTransferActForm
+            // guna2Button1
             // 
-            btnTransferActForm.BorderRadius = 10;
-            btnTransferActForm.CustomizableEdges = customizableEdges17;
-            btnTransferActForm.DisabledState.BorderColor = Color.DarkGray;
-            btnTransferActForm.DisabledState.CustomBorderColor = Color.DarkGray;
-            btnTransferActForm.DisabledState.FillColor = Color.FromArgb(169, 169, 169);
-            btnTransferActForm.DisabledState.ForeColor = Color.FromArgb(141, 141, 141);
-            btnTransferActForm.FillColor = Color.FromArgb(0, 51, 153);
-            btnTransferActForm.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 204);
-            btnTransferActForm.ForeColor = Color.White;
-            btnTransferActForm.Location = new Point(1035, 45);
-            btnTransferActForm.Name = "btnTransferActForm";
-            btnTransferActForm.ShadowDecoration.CustomizableEdges = customizableEdges18;
-            btnTransferActForm.Size = new Size(218, 56);
-            btnTransferActForm.TabIndex = 29;
-            btnTransferActForm.Text = "Передача во временное пользование";
-            btnTransferActForm.Click += btnTransferActForm_Click;
+            guna2Button1.BorderRadius = 10;
+            guna2Button1.CustomizableEdges = customizableEdges17;
+            guna2Button1.DisabledState.BorderColor = Color.DarkGray;
+            guna2Button1.DisabledState.CustomBorderColor = Color.DarkGray;
+            guna2Button1.DisabledState.FillColor = Color.FromArgb(169, 169, 169);
+            guna2Button1.DisabledState.ForeColor = Color.FromArgb(141, 141, 141);
+            guna2Button1.FillColor = Color.FromArgb(0, 51, 153);
+            guna2Button1.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 204);
+            guna2Button1.ForeColor = Color.White;
+            guna2Button1.Location = new Point(1038, 45);
+            guna2Button1.Name = "guna2Button1";
+            guna2Button1.ShadowDecoration.CustomizableEdges = customizableEdges18;
+            guna2Button1.Size = new Size(218, 56);
+            guna2Button1.TabIndex = 29;
+            guna2Button1.Text = "Списание";
+            guna2Button1.Click += guna2Button1_Click;
             // 
             // pictureBox5
             // 
@@ -417,7 +416,7 @@
             btnExport.Size = new Size(166, 56);
             btnExport.TabIndex = 27;
             btnExport.Text = "Импорт файла";
-            btnExport.Click += btnExport_Click;
+            btnExport.Click += BtnImport_Click;
             // 
             // ProfileForm
             // 
@@ -470,7 +469,7 @@
         private Panel pnlTopBar;
         private Guna.UI2.WinForms.Guna2Button btnExport;
         private PictureBox pictureBox6;
-        private Guna.UI2.WinForms.Guna2Button btnTransferActForm;
+        private Guna.UI2.WinForms.Guna2Button guna2Button1;
         private PictureBox pictureBox5;
     }
 }

@@ -180,7 +180,7 @@
             cmbTeacher.Location = new Point(148, 184);
             cmbTeacher.Name = "cmbTeacher";
             cmbTeacher.ShadowDecoration.CustomizableEdges = customizableEdges10;
-            cmbTeacher.Size = new Size(190, 36);
+            cmbTeacher.Size = new Size(200, 36);
             cmbTeacher.TabIndex = 52;
             cmbTeacher.SelectedIndexChanged += cmbTeacher_SelectedIndexChanged;
             // 

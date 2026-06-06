@@ -38,12 +38,11 @@ namespace inventory_of_equipment_in_classrooms
                         {
                             MessageBox.Show($"Добро пожаловать, {user.Firstname}!", "Успешный вход", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            var profileForm = new ProfileForm(user.Id);
-
+                            FormNavigator.Init(user.Id);
                             this.Hide();
-                            profileForm.ShowDialog();
+                            FormNavigator.ShowProfile();
                             this.Close();
-                        }
+                    }
                         else
                         {
                             MessageBox.Show("Неверный Email или Пароль.", "Ошибка авторизации", MessageBoxButtons.OK, MessageBoxIcon.Error);

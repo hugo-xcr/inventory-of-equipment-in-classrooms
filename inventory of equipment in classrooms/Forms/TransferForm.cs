@@ -22,6 +22,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
         private List<int> _selectedEquipmentIds = new List<int>();
         private List<int> _filteredEquipmentIds = null;
         private bool _isProcessing = false;
+        private TransferActForm _transferActForm;
 
         public class UserReference
         {
@@ -1227,30 +1228,9 @@ namespace inventory_of_equipment_in_classrooms.Forms
             LoadEquipmentData();
         }
 
-        private void BtnProfile_Click(object sender, EventArgs e)
-        {
-            this.DialogResult = DialogResult.OK;
-            this.Close();
-        }
-
-        private void BtnEditCard_Click(object sender, EventArgs e)
-        {
-            this.DialogResult = DialogResult.Retry;
-            this.Close();
-        }
-
         private void cmbSender_SelectedIndexChanged(object sender, EventArgs e)
         {
         }
-
-        private void btnImport_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var importForm = new ImportForm(_currentUserId);
-            importForm.ShowDialog();
-            this.Close();
-        }
-
 
         private void dgvHistoryTransfer_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -1272,21 +1252,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
 
                 MessageBox.Show($"Документ №{docId}\n\nСостав передачи:\n{details}",
                     "Состав документа", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-
-        private void guna2Button1_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                var transferActForm = new TransferActForm(_currentUserId);
-
-                transferActForm.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Не удалось открыть форму акта: {ex.Message}", "Ошибка",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -1424,13 +1389,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        private void BtnTransfer_Click(object sender, EventArgs e)
-        {
-            SetActiveButton(btnTransfer);
-            var transferForm = new TransferForm(_currentUserId);
-            transferForm.ShowDialog();
-            SetActiveButton(btnProfile);
-        }
 
         private void SetActiveButton(Guna.UI2.WinForms.Guna2Button activeBtn)
         {
@@ -1440,5 +1398,18 @@ namespace inventory_of_equipment_in_classrooms.Forms
             activeBtn.FillColor = System.Drawing.Color.White;
             activeBtn.ForeColor = System.Drawing.Color.Black;
         }
+        private void BtnProfile_Click(object sender, EventArgs e) =>
+    FormNavigator.ShowProfile();
+
+        private void BtnEditCard_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowEditCard();
+
+
+        private void guna2Button1_Click(object sender, EventArgs e) =>  // Списание
+            FormNavigator.ShowTransferAct();
+
+        private void BtnImport_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowImport();
     }
+
 }

@@ -51,35 +51,11 @@ namespace inventory_of_equipment_in_classrooms.Forms
         }
 
 
-        private void BtnProfile_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var profileForm = new ProfileForm(_currentUserId);
-            profileForm.ShowDialog();
-            this.Close();
-        }
-
         private void BtnSearchForm_Click(object sender, EventArgs e)
         {
             this.Hide();
             var searchForm = new SearchForm(_currentUserId);
             searchForm.ShowDialog();
-            this.Close();
-        }
-
-        private void BtnEditCard_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var editForm = new EditCardForm(_currentUserId);
-            editForm.ShowDialog();
-            this.Close();
-        }
-
-        private void BtnActForm_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var actForm = new TransferActForm(_currentUserId);
-            actForm.ShowDialog();
             this.Close();
         }
 
@@ -169,47 +145,11 @@ namespace inventory_of_equipment_in_classrooms.Forms
             }
         }
 
-        private void BtnImport_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                using (var db = new DatabaseContent())
-                {
-                    int addedCount = 0;
-                    foreach (var item in _previewData)
-                    {
-                        if (!db.InventoryItems.Any(x => x.InventoryNumber == item.InventoryNumber))
-                        {
-                            item.CustodianId = _currentUserId > 0 ? _currentUserId : (int?)null;
-
-                            db.InventoryItems.Add(item);
-                            addedCount++;
-                        }
-                    }
-                    db.SaveChanges();
-                    MessageBox.Show($"Импорт завершен! Добавлено: {addedCount}");
-                    this.Close();
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка сохранения: {ex.InnerException?.Message ?? ex.Message}");
-            }
-        }
 
         private void BtnCancel_Click(object sender, EventArgs e)
         {
             this.Close();
         }
-
-        private void btnProfile_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var profileForm = new ProfileForm(_currentUserId);
-            profileForm.ShowDialog();
-            this.Close();
-        }
-
         private void btnEditCard_Click(object sender, EventArgs e)
         {
             this.Hide();
@@ -218,13 +158,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        private void BtnTransfer_Click(object sender, EventArgs e)
-        {
-            SetActiveButton(btnTransfer);
-            var transferForm = new TransferForm(_currentUserId);
-            transferForm.ShowDialog();
-            SetActiveButton(btnProfile);
-        }
         private void SetActiveButton(Guna.UI2.WinForms.Guna2Button activeBtn)
         {
             var inactiveColor = System.Drawing.Color.FromArgb(0, 51, 153);
@@ -233,14 +166,20 @@ namespace inventory_of_equipment_in_classrooms.Forms
             activeBtn.FillColor = System.Drawing.Color.White;
             activeBtn.ForeColor = System.Drawing.Color.Black;
         }
+        private void BtnProfile_Click(object sender, EventArgs e) =>
+    FormNavigator.ShowProfile();
 
-        private void guna2Button1_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var actForm = new TransferActForm(_currentUserId);
-            actForm.ShowDialog();
-            this.Close();
-        }
+        private void BtnEditCard_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowEditCard();
+
+        private void BtnTransfer_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowTransfer();
+
+        private void guna2Button1_Click(object sender, EventArgs e) => 
+            FormNavigator.ShowTransferAct();
+
+        private void BtnImport_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowImport();
     }
 }
 

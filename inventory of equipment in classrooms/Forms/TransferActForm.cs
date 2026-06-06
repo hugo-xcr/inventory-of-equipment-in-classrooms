@@ -51,14 +51,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             }
         }
 
-        private void BtnProfile_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var profileForm = new ProfileForm(_currentUserId);
-            profileForm.ShowDialog();
-            this.Close();
-        }
-
 
         private void BtnSearchForm_Click(object sender, EventArgs e)
         {
@@ -68,21 +60,6 @@ namespace inventory_of_equipment_in_classrooms.Forms
             this.Close();
         }
 
-        private void BtnEditCard_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var editForm = new EditCardForm(_currentUserId);
-            editForm.ShowDialog();
-            this.Close();
-        }
-
-        private void BtnImportForm_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var importForm = new ImportForm(_currentUserId);
-            importForm.ShowDialog();
-            this.Close();
-        }
 
 
         private void LoadEquipment()
@@ -361,11 +338,11 @@ namespace inventory_of_equipment_in_classrooms.Forms
             }
         }
         public void GenerateInspectionActDocx(Models.Document document,
-            List<(int ItemId, string Name, string InventoryNumber,
-            string DateOnAccounting, string Defects, string CustodianName)> items,
-            string filePath,
-            string chairman,
-            string conclusion)
+     List<(int ItemId, string Name, string InventoryNumber,
+     string DateOnAccounting, string Defects, string CustodianName)> items,
+     string filePath,
+     string chairman,
+     string conclusion)
         {
             try
             {
@@ -383,53 +360,49 @@ namespace inventory_of_equipment_in_classrooms.Forms
                     new PageMargin { Top = 1134, Bottom = 1134, Left = 1701, Right = 850 }
                 );
 
+                var ru = new System.Globalization.CultureInfo("ru-RU");
+                var date = DateTime.Now;
+                string dateStr = $"«{date:dd}» {date.ToString("MMMM", ru)} {date:yyyy} г.";
+
+                string teacherName = items.Count > 0 && items[0].CustodianName != "____________________"
+                    ? items[0].CustodianName
+                    : "не назначен";
+
                 AddCenteredBoldParagraph(body, "АКТ ОСМОТРА", "28");
                 AddEmptyLine(body);
-                AddNormalParagraph(body, "Комиссия в составе:", false);
+                AddNormalParagraph(body, "Комиссия в составе:");
+                AddNormalParagraph(body, "Председатель:");
+                AddNormalParagraph(body, "Заместитель директора А.М. Чернега");
+                AddNormalParagraph(body, "Члены комиссии:");
+                AddNormalParagraph(body, $"Преподаватель {teacherName}");
+                AddNormalParagraph(body, "Комендант Флотская Г.А. - МОЛ");
+                AddNormalParagraph(body, "Зам. Директора Иванова Л.Н.");
                 AddEmptyLine(body);
-                AddNormalParagraph(body, "Председатель:", false);
-                AddEmptyLine(body);
-                AddNormalParagraph(body, $"Заместитель директора А.М. Чернега", false);
-                AddEmptyLine(body);
-                AddNormalParagraph(body, "Члены комиссии:", false);
-                AddEmptyLine(body);
-                string teacherName = items.Count > 0 ? items[0].CustodianName : "____________________";
-                AddNormalParagraph(body, $"Преподаватель {teacherName} – МОЛ");
-                AddNormalParagraph(body, "Комендант Флотская Г.А.", false);
-                AddNormalParagraph(body, "Зам. Директора Иванова Л.Н.", false);
+                AddNormalParagraph(body, "Провели осмотр технического состояния");
                 AddEmptyLine(body);
 
-                AddNormalParagraph(body, "Провели осмотр технического состояния", false);
-                AddEmptyLine(body);
                 foreach (var item in items)
                 {
-                    AddNormalParagraph(body, "Наименование объекта: ", item.Name);
-                    AddNormalParagraph(body, "Инвентарный номер: ", item.InventoryNumber);
-                    AddNormalParagraph(body, "Дата принятия к учету: ", item.DateOnAccounting);
-                    AddNormalParagraph(body, "Количество: ", "1 шт.");
+                    AddNormalParagraph(body, $"Наименование объекта: {item.Name}");
+                    AddNormalParagraph(body, $"Инвентарный номер: {item.InventoryNumber}");
+                    AddNormalParagraph(body, $"Дата принятия к учету: {item.DateOnAccounting}");
+                    AddNormalParagraph(body, "Количество: 1 шт.");
                     AddNormalParagraph(body,
-                        $"Выявлены следующие дефекты: {(string.IsNullOrWhiteSpace(item.Defects) ? "____________________" : item.Defects)}",
-                        false);
+                        $"Выявлены следующие дефекты: {(string.IsNullOrWhiteSpace(item.Defects) ? "не выявлены" : item.Defects)}");
                     AddEmptyLine(body);
                 }
-                AddNormalParagraph(body, "Заключение комиссии:", false);
+
+                AddNormalParagraph(body, "Заключение комиссии:");
                 AddEmptyLine(body);
                 AddNormalParagraph(body,
                     string.IsNullOrWhiteSpace(conclusion)
                         ? "Вследствие полной утраты потребительских свойств в ходе длительной эксплуатации " +
                           "вышли из строя, пришли в полную негодность и к дальнейшей эксплуатации не пригодны, " +
                           "ремонту и восстановлению не подлежат."
-                        : conclusion,
-                    false);
+                        : conclusion);
 
                 AddEmptyLine(body);
-
-                CreateSignaturesSection(body, teacherName);
-
-                AddEmptyLine(body);
-                var date = document.DocDate;
-                var ru = new System.Globalization.CultureInfo("ru-RU");
-                AddNormalParagraph(body, $"«{date:dd}» {date.ToString("MMMM", ru)} {date:yyyy} г.", false);
+                CreateSignaturesSection(body, teacherName, dateStr);
 
                 body.AppendChild(sectPr);
                 mainPart.Document.AppendChild(body);
@@ -440,58 +413,20 @@ namespace inventory_of_equipment_in_classrooms.Forms
                 throw new Exception($"Ошибка создания акта: {ex.Message}", ex);
             }
         }
-
-        private void CreateSignaturesSection(Body body, string teacherName)
+        private void CreateSignaturesSection(Body body, string teacherName, string dateStr)
         {
-            var table = new Table();
-            table.AppendChild(new TableProperties(
-                new TableBorders(
-                    new TopBorder { Val = BorderValues.Nil },
-                    new BottomBorder { Val = BorderValues.Nil },
-                    new LeftBorder { Val = BorderValues.Nil },
-                    new RightBorder { Val = BorderValues.Nil },
-                    new InsideHorizontalBorder { Val = BorderValues.Nil },
-                    new InsideVerticalBorder { Val = BorderValues.Nil }
-                ),
-                new TableWidth { Width = "9360", Type = TableWidthUnitValues.Dxa }
-            ));
-            table.AppendChild(new TableGrid(
-                new GridColumn { Width = "4680" },
-                new GridColumn { Width = "4680" }
-            ));
-
-            AddSignatureTableRow(table, "А.М. Чернега", teacherName);
-            AddEmptyTableRow(table);
-            AddSignatureTableRow(table, "Л.Н. Иванова", "Г.А. Флотская");
-
-            body.AppendChild(table);
             AddEmptyLine(body);
+            AddNormalParagraph(body, "Подписи:");
+            AddEmptyLine(body);
+            AddNormalParagraph(body, $"Председатель: А.М. Чернега  ____________  {dateStr}");
+            AddEmptyLine(body);
+            AddNormalParagraph(body, $"Член комиссии: {teacherName}  ____________  {dateStr}");
+            AddEmptyLine(body);
+            AddNormalParagraph(body, $"Комендант: Г.А. Флотская  ____________  {dateStr}");
+            AddEmptyLine(body);
+            AddNormalParagraph(body, $"Зам. директора: Л.Н. Иванова  ____________  {dateStr}");
         }
 
-        private void AddSignatureTableRow(Table table, string name1, string name2)
-        {
-            var row = new TableRow();
-
-            row.AppendChild(MakeSignatureCell("4680", name1));
-            row.AppendChild(MakeSignatureCell("4680", name2));
-
-            table.AppendChild(row);
-        }
-
-        private void AddEmptyTableRow(Table table)
-        {
-            var row = new TableRow();
-            row.AppendChild(new TableCell(
-                new TableCellProperties(
-                    new TableCellWidth { Width = "9360", Type = TableWidthUnitValues.Dxa },
-                    new GridSpan { Val = 2 }
-                ),
-                new Paragraph(new ParagraphProperties(
-                    new SpacingBetweenLines { After = "60" }
-                ))
-            ));
-            table.AppendChild(row);
-        }
 
         private TableCell MakeSignatureCell(string width, string name)
         {
@@ -788,21 +723,7 @@ namespace inventory_of_equipment_in_classrooms.Forms
             ));
         }
 
-        private void btnImport_Click(object sender, EventArgs e)
-        {
-            this.Hide();
-            var importForm = new ImportForm(_currentUserId);
-            importForm.ShowDialog();
-            this.Close();
-        }
 
-        private void BtnTransfer_Click(object sender, EventArgs e)
-        {
-            SetActiveButton(btnTransfer);
-            var transferForm = new TransferForm(_currentUserId);
-            transferForm.ShowDialog();
-            SetActiveButton(btnProfile);
-        }
         private void SetActiveButton(Guna.UI2.WinForms.Guna2Button activeBtn)
         {
             var inactiveColor = System.Drawing.Color.FromArgb(0, 51, 153);
@@ -811,20 +732,20 @@ namespace inventory_of_equipment_in_classrooms.Forms
             activeBtn.FillColor = System.Drawing.Color.White;
             activeBtn.ForeColor = System.Drawing.Color.Black;
         }
-        private void btnEditCard_Click_1(object sender, EventArgs e)
-        {
-            this.Hide();
-            var editForm = new EditCardForm(_currentUserId);
-            editForm.ShowDialog();
-            this.Close();
-        }
 
-        private void btnProfile_Click_1(object sender, EventArgs e)
-        {
-            this.Hide();
-            var profileForm = new ProfileForm(_currentUserId);
-            profileForm.ShowDialog();
-            this.Close();
-        }
+        private void BtnProfile_Click(object sender, EventArgs e) =>
+    FormNavigator.ShowProfile();
+
+        private void BtnEditCard_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowEditCard();
+
+        private void BtnTransfer_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowTransfer();
+
+        private void guna2Button1_Click(object sender, EventArgs e) =>  
+            FormNavigator.ShowTransferAct();
+
+        private void BtnImport_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowImport();
     }
 }

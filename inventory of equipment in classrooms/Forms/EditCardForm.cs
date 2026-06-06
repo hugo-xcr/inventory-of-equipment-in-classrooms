@@ -15,6 +15,7 @@ namespace inventory_of_equipment_in_classrooms
     {
         private readonly Color DefaultBlueColor = Color.FromArgb(0, 51, 153);
         private readonly Color HoverPanelColor = Color.FromArgb(10, 61, 173);
+        private TransferActForm _transferActForm;
         private readonly int _currentUserId;
         private List<int> _searchFilterIds = new List<int>();
         private int? _selectedRoomId;
@@ -34,6 +35,15 @@ namespace inventory_of_equipment_in_classrooms
 
         private void EditCardForm_Load(object sender, EventArgs e)
         {
+            var toolTip = new ToolTip();
+            toolTip.SetToolTip(txtOkeiCode,
+                "Коды ОКЕИ:\n" +
+                "796 — штука\n" +
+                "006 — метр\n" +
+                "112 — литр\n" +
+                "166 — килограмм\n" +
+                "839 — комплект\n" +
+                "778 — упаковка");
             SetActiveButton(btnEditCard);
             try
             {
@@ -48,7 +58,7 @@ namespace inventory_of_equipment_in_classrooms
             }
         }
 
-        
+
 
         private static DatabaseContent GetDbContext() => new DatabaseContent();
 
@@ -185,7 +195,7 @@ namespace inventory_of_equipment_in_classrooms
         {
             UnsubscribeFilterEvents();
 
-            if (cmbClassrooms.Items.Cast<object>().Any()) 
+            if (cmbClassrooms.Items.Cast<object>().Any())
             {
                 cmbClassrooms.SelectedValue = roomId > 0 ? roomId : 0;
             }
@@ -214,8 +224,8 @@ namespace inventory_of_equipment_in_classrooms
                 {
                     Name = equipmentName,
                     InventoryNumber = txtInventoryNumber.Text.Trim(),
-                    UnitName = txtUnitName.Text.Trim(),         
-                    OkeiCode = txtOkeiCode.Text.Trim(),        
+                    UnitName = txtUnitName.Text.Trim(),
+                    OkeiCode = txtOkeiCode.Text.Trim(),
 
                     DateOnAccounting = dateOnAccount.HasValue
                         ? DateTime.SpecifyKind(dateOnAccount.Value, DateTimeKind.Utc)
@@ -371,7 +381,7 @@ namespace inventory_of_equipment_in_classrooms
                     else
                     {
                         MessageBox.Show("Записей не найдено.");
-                        LoadEquipmentData(); 
+                        LoadEquipmentData();
                     }
                 }
             }
@@ -468,27 +478,11 @@ namespace inventory_of_equipment_in_classrooms
             else if (activeBtn == btnTransfer) pictureBox4.BackColor = Color.White;
         }
 
-        private void BtnProfile_Click(object sender, EventArgs e)
-        {
-            if (MessageBox.Show("Вы уверены, что хотите вернуться на профиль?",
-                "Выход", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            {
-                this.DialogResult = DialogResult.Cancel;
-                this.Close();
-            }
-        }
-
-        private void BtnEditCard_Click(object sender, EventArgs e) => SetActiveButton(btnEditCard);
-        private void BtnTransfer_Click(object sender, EventArgs e)
-        {
-            SetActiveButton(btnTransfer);
-            var transferForm = new TransferForm(_currentUserId);
-            transferForm.ShowDialog();
-            SetActiveButton(btnProfile);
-        }
+   
         private void PBoxLogo_MouseEnter(object sender, EventArgs e) => pnlTopBar.BackColor = HoverPanelColor;
         private void PBoxLogo_MouseLeave(object sender, EventArgs e) => pnlTopBar.BackColor = DefaultBlueColor;
-        private void cmbClassrooms_SelectedIndexChanged(object sender, EventArgs e) {
+        private void cmbClassrooms_SelectedIndexChanged(object sender, EventArgs e)
+        {
             AutoSelectTeacherByClassroom();
             LoadEquipmentData();
         }
@@ -746,50 +740,24 @@ namespace inventory_of_equipment_in_classrooms
             public string Name { get; set; }
         }
 
-        private void btnExport_Click(object sender, EventArgs e)
-        {
-            BtnImport_Click(sender, e);
-        }
+        private void BtnProfile_Click(object sender, EventArgs e) =>
+    FormNavigator.ShowProfile();
 
-        private void guna2Button1_Click(object sender, EventArgs e)
-        {
-            BtnTransferAct_Click(sender, e);
-        }
+        private void BtnEditCard_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowEditCard();
 
-        private void BtnImport_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                SetActiveButton(btnEditCard);
-                var importForm = new ImportForm(_currentUserId);
-                if (importForm.ShowDialog() == DialogResult.OK)
-                {
-                    LoadEquipmentData();
-                    MessageBox.Show("Импорт завершен успешно!", "Успех");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
-            }
-        }
+        private void BtnTransfer_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowTransfer();
 
-        private void BtnTransferAct_Click(object sender, EventArgs e)
+        private void guna2Button1_Click(object sender, EventArgs e) => 
+            FormNavigator.ShowTransferAct();
+
+        private void BtnImport_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowImport();
+
+        private void label6_Click(object sender, EventArgs e)
         {
-            try
-            {
-                SetActiveButton(btnEditCard);
-                var transferActForm = new TransferActForm(_currentUserId);
-                if (transferActForm.ShowDialog() == DialogResult.OK)
-                {
-                    LoadEquipmentData();
-                    MessageBox.Show("Акт списания создан успешно!", "Успех");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
-            }
+
         }
     }
 }

@@ -89,37 +89,21 @@ namespace inventory_of_equipment_in_classrooms
             activeBtn.ForeColor = System.Drawing.Color.Black;
         }
 
-        private void BtnProfile_Click(object sender, EventArgs e) => SetActiveButton(btnProfile);
-
-        private void BtnEditCard_Click(object sender, EventArgs e)
-        {
-            SetActiveButton(btnEditCard);
-            var editForm = new EditCardForm(_currentUserId);
-            editForm.ShowDialog();
-            SetActiveButton(btnProfile);
-        }
-
-        private void BtnTransfer_Click(object sender, EventArgs e)
-        {
-            SetActiveButton(btnTransfer);
-            var transferForm = new TransferForm(_currentUserId);
-            transferForm.ShowDialog();
-            SetActiveButton(btnProfile);
-        }
-
-        private void BtnImport_Click(object sender, EventArgs e)
-        {
-            var importForm = new ImportForm();
-            importForm.ShowDialog();
-        }
+        private TransferActForm _transferActForm;
 
         private void btnTransferActForm_Click(object sender, EventArgs e)
         {
             try
             {
-                var transferActForm = new TransferActForm(_currentUserId);
+                if (_transferActForm == null || _transferActForm.IsDisposed)
+                {
+                    _transferActForm = new TransferActForm(_currentUserId);
+                }
 
-                transferActForm.ShowDialog();
+                if (!_transferActForm.Visible)
+                    _transferActForm.ShowDialog();
+                else
+                    _transferActForm.BringToFront();
             }
             catch (Exception ex)
             {
@@ -128,10 +112,18 @@ namespace inventory_of_equipment_in_classrooms
             }
         }
 
-        private void btnExport_Click(object sender, EventArgs e)
-        {
-            var importForm = new ImportForm();
-            importForm.ShowDialog();
-        }
+
+
+        private void BtnEditCard_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowEditCard();
+
+        private void BtnTransfer_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowTransfer();
+
+        private void guna2Button1_Click(object sender, EventArgs e) =>  // Списание
+            FormNavigator.ShowTransferAct();
+
+        private void BtnImport_Click(object sender, EventArgs e) =>
+            FormNavigator.ShowImport();
     }
 }
