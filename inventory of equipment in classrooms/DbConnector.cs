@@ -31,18 +31,16 @@ namespace inventory_of_equipment_in_classrooms.Data
             modelBuilder.Entity<Room>().HasKey(r => r.Id);
             modelBuilder.Entity<InventoryItem>().HasKey(i => i.Id);
 
-            // Привязка к таблицам
             modelBuilder.Entity<JobTitle>().ToTable("job_title");
             modelBuilder.Entity<User>().ToTable("user");
             modelBuilder.Entity<Room>().ToTable("room");
             modelBuilder.Entity<InventoryItem>().ToTable("inventory_item");
 
-            // ИСПРАВЛЕНИЕ: Жесткое указание имени колонки для даты, чтобы избежать обрезки до "date_on_accoun"
             modelBuilder.Entity<InventoryItem>()
                 .Property(i => i.DateOnAccounting)
                 .HasColumnName("date_on_accounting");
 
-            // Описание связей
+
             modelBuilder.Entity<InventoryItem>()
                 .HasOne(i => i.Custodian)
                 .WithMany()
