@@ -217,23 +217,29 @@ namespace inventory_of_equipment_in_classrooms
                 if (!TryParseInput(out decimal initialCost, out _, out _, out DateTime? dateOnAccount, out string equipmentName, out string currentState))
                     return;
 
+                string inventoryNumber = txtInventoryNumber.Text.Trim();
+                if (!string.IsNullOrWhiteSpace(inventoryNumber))
+                {
+                    bool exists = dbContext.InventoryItems.Any(i => i.InventoryNumber == inventoryNumber);
+                    if (exists)
+                    {
+                        MessageBox.Show("Оборудование с таким инвентарным номером уже существует!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+
                 int selectedTeacherId = Convert.ToInt32(cmbTeachers.SelectedValue);
                 int selectedClassroomId = Convert.ToInt32(cmbClassrooms.SelectedValue);
 
                 var newItem = new InventoryItem
                 {
                     Name = equipmentName,
-                    InventoryNumber = txtInventoryNumber.Text.Trim(),
+                    InventoryNumber = string.IsNullOrWhiteSpace(inventoryNumber) ? null : inventoryNumber,
                     UnitName = txtUnitName.Text.Trim(),
                     OkeiCode = txtOkeiCode.Text.Trim(),
-
-                    DateOnAccounting = dateOnAccount.HasValue
-                        ? DateTime.SpecifyKind(dateOnAccount.Value, DateTimeKind.Utc)
-                        : DateTime.UtcNow,
-
+                    DateOnAccounting = dateOnAccount.HasValue ? DateTime.SpecifyKind(dateOnAccount.Value, DateTimeKind.Utc) : DateTime.UtcNow,
                     InitialCost = initialCost,
                     CurrentState = currentState,
-
                     RoomId = selectedClassroomId > 0 ? selectedClassroomId : (int?)null,
                     CustodianId = selectedTeacherId > 0 ? selectedTeacherId : (int?)null
                 };
@@ -243,12 +249,18 @@ namespace inventory_of_equipment_in_classrooms
 
                 MessageBox.Show("Запись успешно добавлена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 LoadEquipmentData();
-
                 ClearInputs();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка: {ex.InnerException?.Message ?? ex.Message}");
+                if (ex.InnerException?.Message.Contains("duplicate key") == true)
+                {
+                    MessageBox.Show("Оборудование с таким инвентарным номером уже существует!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    MessageBox.Show($"Ошибка: {ex.InnerException?.Message ?? ex.Message}");
+                }
             }
         }
         private void ClearInputs()
@@ -267,7 +279,7 @@ namespace inventory_of_equipment_in_classrooms
         {
             if (_selectedEquipmentId <= 0)
             {
-                MessageBox.Show("Выберите конкретную запись в таблице перед редактированием.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Выберите запись для редактирования.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -281,20 +293,23 @@ namespace inventory_of_equipment_in_classrooms
 
                 if (item == null)
                 {
-                    MessageBox.Show("Запись не найдена в базе данных. Возможно, она была удалена.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Запись не найдена.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 string inputInvNumber = txtInventoryNumber.Text.Trim();
 
-                bool exists = dbContext.InventoryItems.Any(i => i.InventoryNumber == inputInvNumber && i.Id != _selectedEquipmentId);
-                if (exists)
+                if (!string.IsNullOrWhiteSpace(inputInvNumber))
                 {
-                    MessageBox.Show("Этот инвентарный номер уже присвоен другому оборудованию!", "Ошибка уникальности", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
+                    bool exists = dbContext.InventoryItems.Any(i => i.InventoryNumber == inputInvNumber && i.Id != _selectedEquipmentId);
+                    if (exists)
+                    {
+                        MessageBox.Show("Этот инвентарный номер уже присвоен другому оборудованию!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
                 }
 
-                item.InventoryNumber = inputInvNumber;
+                item.InventoryNumber = string.IsNullOrWhiteSpace(inputInvNumber) ? null : inputInvNumber;
                 item.Name = equipmentName;
                 item.InitialCost = initialCost;
                 item.CurrentState = currentState;
@@ -316,15 +331,20 @@ namespace inventory_of_equipment_in_classrooms
 
                 MessageBox.Show("Запись успешно обновлена!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-
                 _selectedEquipmentId = 0;
                 ClearInputs();
-
                 LoadEquipmentData();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при сохранении: {ex.InnerException?.Message ?? ex.Message}", "Ошибка БД", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (ex.InnerException?.Message.Contains("duplicate key") == true)
+                {
+                    MessageBox.Show("Этот инвентарный номер уже присвоен другому оборудованию!", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    MessageBox.Show($"Ошибка: {ex.InnerException?.Message ?? ex.Message}");
+                }
             }
         }
 
@@ -607,7 +627,7 @@ namespace inventory_of_equipment_in_classrooms
         }
         private void btnAddRoom_Click(object sender, EventArgs e)
         {
-            using var editForm = new RoomEditForm();
+            using var editForm = new RoomEditForm(); 
             if (editForm.ShowDialog() != DialogResult.OK) return;
 
             string newName = editForm.RoomName;
@@ -623,7 +643,11 @@ namespace inventory_of_equipment_in_classrooms
                     return;
                 }
 
-                var newRoom = new Room { RoomName = newName };
+                var newRoom = new Room
+                {
+                    RoomName = newName,
+                    TeacherId = editForm.SelectedTeacherId 
+                };
                 db.Rooms.Add(newRoom);
                 db.SaveChanges();
 
@@ -631,7 +655,8 @@ namespace inventory_of_equipment_in_classrooms
                 LoadFilterData();
                 SubscribeFilterEvents();
 
-                MessageBox.Show($"Аудитория {newName} добавлена (Id={newRoom.Id}).");
+                MessageBox.Show($"Аудитория {newName} успешно добавлена!", "Успех",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -657,12 +682,15 @@ namespace inventory_of_equipment_in_classrooms
                 if (editForm.ShowDialog() != DialogResult.OK) return;
 
                 roomToUpdate.RoomName = editForm.RoomName;
-                roomToUpdate.TeacherId = editForm.SelectedTeacherId;
+                roomToUpdate.TeacherId = editForm.SelectedTeacherId; 
                 db.SaveChanges();
 
                 UnsubscribeFilterEvents();
-                LoadFilterData();
+                LoadFilterData(); 
                 SubscribeFilterEvents();
+
+                MessageBox.Show("Аудитория успешно обновлена!", "Успех",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {

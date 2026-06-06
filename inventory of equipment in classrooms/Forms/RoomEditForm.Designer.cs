@@ -182,7 +182,6 @@
             cmbTeacher.ShadowDecoration.CustomizableEdges = customizableEdges10;
             cmbTeacher.Size = new Size(200, 36);
             cmbTeacher.TabIndex = 52;
-            cmbTeacher.SelectedIndexChanged += cmbTeacher_SelectedIndexChanged;
             // 
             // RoomEditForm
             // 

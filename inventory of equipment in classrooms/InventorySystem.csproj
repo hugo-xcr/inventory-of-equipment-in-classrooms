@@ -26,6 +26,7 @@
     <PackageReference Include="EPPlus" Version="8.5.4" />
     <PackageReference Include="Guna.Charts.WinForms" Version="1.1.0" />
     <PackageReference Include="Guna.UI2.WinForms" Version="2.0.4.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.8" />
     <PackageReference Include="Microsoft.Graph" Version="6.0.3" />
     <PackageReference Include="Microsoft.Kiota.Abstractions" Version="2.0.0" />
     <PackageReference Include="Microsoft.Office.Interop.Word" Version="15.0.4797.1004" />

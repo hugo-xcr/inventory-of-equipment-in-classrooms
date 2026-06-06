@@ -227,7 +227,7 @@
             guna2Button1.ShadowDecoration.CustomizableEdges = customizableEdges2;
             guna2Button1.Size = new Size(212, 56);
             guna2Button1.TabIndex = 40;
-            guna2Button1.Text = "Списание/Передача во временное пользование";
+            guna2Button1.Text = "Списание";
             guna2Button1.Click += guna2Button1_Click;
             // 
             // pictureBox2
